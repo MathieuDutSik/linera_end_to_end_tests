@@ -1,0 +1,20 @@
+[package]
+name = "test_wasm_smart_contracts"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+sysinfo = "0.30"
+
+
+# Linera dependencies from GitHub
+linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage", features = ["test"] }
+linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage" }
+
+# Example applications
+state-triviality = { path = "./smart_contract_code/state-triviality" }
