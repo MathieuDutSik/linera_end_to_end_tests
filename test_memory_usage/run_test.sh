@@ -21,9 +21,12 @@ echo "Building WASM smart contract tester."
 cargo build
 
 
-git clone https://github.com/MathieuDutSik/linera-protocol_second
-cd linera-protocol_second && cargo build && cd ..
-
+if [ -d "linera-protocol_second" ]; then
+    echo "Directory exists!"
+else
+    git clone https://github.com/MathieuDutSik/linera-protocol_second
+    cd linera-protocol_second && cargo build && cd ..
+fi
 
 
 echo "Linking linera binaries..."
