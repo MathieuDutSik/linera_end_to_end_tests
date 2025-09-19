@@ -12,9 +12,9 @@ sysinfo = "0.30"
 
 
 # Linera dependencies from GitHub
-linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage", features = ["test"] }
-linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage", features = ["test", "storage-service", "wasmer"] }
-linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "has_non_trivial_storage" }
+linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", features = ["test"] }
+linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second" }
 
 # Example applications
-state-triviality = { path = "./smart_contract_code/state-triviality" }
+counter-no-state = { path = "./smart_contract_code/counter-no-state" }

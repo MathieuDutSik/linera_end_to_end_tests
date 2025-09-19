@@ -210,7 +210,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8725874ecfbf399e071150b8619c4071d7b2b7a2f117e173dddef53c6bdb6bb1"
 dependencies = [
  "async-graphql",
- "axum 0.8.4",
+ "axum",
  "bytes",
  "futures-util",
  "serde_json",
@@ -333,38 +333,11 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "axum"
-version = "0.7.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edca88bc138befd0323b20752846e6587272d3b03b0343c8ea28a6f819e6e71f"
-dependencies = [
- "async-trait",
- "axum-core 0.4.5",
- "bytes",
- "futures-util",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "itoa",
- "matchit 0.7.3",
- "memchr",
- "mime",
- "percent-encoding",
- "pin-project-lite",
- "rustversion",
- "serde",
- "sync_wrapper 1.0.2",
- "tower 0.5.2",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "axum"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "021e862c184ae977658b36c4500f7feac3221ca5da43e3f25bd04ab6c79a29b5"
 dependencies = [
- "axum-core 0.5.2",
+ "axum-core",
  "base64 0.22.1",
  "bytes",
  "form_urlencoded",
@@ -375,7 +348,7 @@ dependencies = [
  "hyper 1.7.0",
  "hyper-util",
  "itoa",
- "matchit 0.8.4",
+ "matchit",
  "memchr",
  "mime",
  "percent-encoding",
@@ -393,26 +366,6 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "axum-core"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09f2bd6146b97ae3359fa0cc6d6b376d9539582c7b4220f041a33ec24c226199"
-dependencies = [
- "async-trait",
- "bytes",
- "futures-util",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "rustversion",
- "sync_wrapper 1.0.2",
- "tower-layer",
- "tower-service",
 ]
 
 [[package]]
@@ -2597,7 +2550,7 @@ dependencies = [
 [[package]]
 name = "linera-base"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -2641,7 +2594,7 @@ dependencies = [
 [[package]]
 name = "linera-chain"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "async-graphql",
  "cfg_aliases",
@@ -2663,7 +2616,7 @@ dependencies = [
 [[package]]
 name = "linera-client"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "bcs",
@@ -2701,7 +2654,7 @@ dependencies = [
 [[package]]
 name = "linera-core"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "async-graphql",
  "async-trait",
@@ -2735,7 +2688,7 @@ dependencies = [
 [[package]]
 name = "linera-execution"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2773,7 +2726,7 @@ dependencies = [
 [[package]]
 name = "linera-faucet-client"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "linera-base",
  "linera-client",
@@ -2789,12 +2742,12 @@ dependencies = [
 [[package]]
 name = "linera-faucet-server"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-graphql",
  "async-graphql-axum",
- "axum 0.8.4",
+ "axum",
  "cfg_aliases",
  "futures",
  "linera-base",
@@ -2810,18 +2763,19 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
- "tower-http 0.6.6",
+ "tower-http",
  "tracing",
 ]
 
 [[package]]
 name = "linera-metrics"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
- "axum 0.8.4",
+ "axum",
  "prometheus",
+ "thiserror 1.0.69",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2836,7 +2790,7 @@ checksum = "c9198100e9ce61acd3c714a2e61eb19fc5b8e2178dd645e2d9061e61e6e1feef"
 [[package]]
 name = "linera-persistent"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "cfg-if",
  "cfg_aliases",
@@ -2854,7 +2808,7 @@ dependencies = [
 [[package]]
 name = "linera-rpc"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2881,8 +2835,9 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tonic",
- "tonic-build",
  "tonic-health",
+ "tonic-prost",
+ "tonic-prost-build",
  "tonic-reflection",
  "tonic-web-wasm-client",
  "tower 0.4.13",
@@ -2892,7 +2847,7 @@ dependencies = [
 [[package]]
 name = "linera-sdk"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2920,7 +2875,7 @@ dependencies = [
 [[package]]
 name = "linera-sdk-derive"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -2930,7 +2885,7 @@ dependencies = [
 [[package]]
 name = "linera-service"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -2940,7 +2895,7 @@ dependencies = [
  "async-lock",
  "async-trait",
  "async-tungstenite",
- "axum 0.8.4",
+ "axum",
  "bcs",
  "bincode",
  "cargo_toml",
@@ -2991,19 +2946,20 @@ dependencies = [
  "tokio-util",
  "toml",
  "tonic",
- "tonic-build",
  "tonic-health",
+ "tonic-prost",
+ "tonic-prost-build",
  "tonic-reflection",
  "tonic-web",
  "tower 0.4.13",
- "tower-http 0.6.6",
+ "tower-http",
  "tracing",
 ]
 
 [[package]]
 name = "linera-storage"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "async-trait",
  "bcs",
@@ -3023,7 +2979,7 @@ dependencies = [
 [[package]]
 name = "linera-storage-service"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -3039,7 +2995,8 @@ dependencies = [
  "thiserror 1.0.69",
  "tokio",
  "tonic",
- "tonic-build",
+ "tonic-prost",
+ "tonic-prost-build",
  "tracing",
  "tracing-subscriber",
 ]
@@ -3047,7 +3004,7 @@ dependencies = [
 [[package]]
 name = "linera-version"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -3068,7 +3025,7 @@ dependencies = [
 [[package]]
 name = "linera-views"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -3092,7 +3049,7 @@ dependencies = [
  "sha3",
  "static_assertions",
  "sync_wrapper 1.0.2",
- "sysinfo",
+ "sysinfo 0.33.1",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -3104,7 +3061,7 @@ dependencies = [
 [[package]]
 name = "linera-views-derive"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "cfg_aliases",
  "deluxe",
@@ -3253,7 +3210,7 @@ dependencies = [
 [[package]]
 name = "linera-witty"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "anyhow",
  "cfg_aliases",
@@ -3268,7 +3225,7 @@ dependencies = [
 [[package]]
 name = "linera-witty-macros"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=has_non_trivial_storage#3300eadae0d20a7d390302ce92591758b5bf9a7c"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second#7a3326d9757c39c8675bc7a0aef494c9cebf7721"
 dependencies = [
  "cfg_aliases",
  "heck 0.4.1",
@@ -3360,12 +3317,6 @@ checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
 dependencies = [
  "regex-automata",
 ]
-
-[[package]]
-name = "matchit"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
 name = "matchit"
@@ -3903,9 +3854,9 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.13.5"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2796faa41db3ec313a31f7624d9286acf277b52de526150b7e69f3debf891ee5"
+checksum = "7231bd9b3d3d33c86b58adbac74b5ec0ad9f496b19d22801d773636feaa95f3d"
 dependencies = [
  "bytes",
  "prost-derive",
@@ -3913,12 +3864,12 @@ dependencies = [
 
 [[package]]
 name = "prost-build"
-version = "0.13.5"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
+checksum = "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1"
 dependencies = [
- "heck 0.5.0",
- "itertools 0.14.0",
+ "heck 0.4.1",
+ "itertools 0.12.1",
  "log",
  "multimap",
  "once_cell",
@@ -3933,12 +3884,12 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.13.5"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
+checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.12.1",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
@@ -3946,9 +3897,9 @@ dependencies = [
 
 [[package]]
 name = "prost-types"
-version = "0.13.5"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52c2c1bf36ddb1a1c396b3601a3cec27c2462e45f07c386894ec3ccf5332bd16"
+checksum = "b9b4db3d6da204ed77bb26ba83b6122a73aeb2e87e25fbf7ad2e84c4ccbf8f72"
 dependencies = [
  "prost",
 ]
@@ -4244,7 +4195,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "rustls 0.21.12",
- "rustls-pemfile 1.0.4",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -4447,15 +4398,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c74cae0a4cf6ccbbf5f359f08efdf8ee7e1dc532573bf0db71968cb56b1448c"
 dependencies = [
  "base64 0.21.7",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
-dependencies = [
- "rustls-pki-types",
 ]
 
 [[package]]
@@ -4968,15 +4910,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
-name = "state-triviality"
-version = "0.1.0"
-dependencies = [
- "counter-no-state",
- "linera-sdk",
- "serde",
-]
-
-[[package]]
 name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5107,6 +5040,21 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
+version = "0.30.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a5b4ddaee55fb2bea2bf0e5000747e5f5c0de765e5a5ff87f4cd106439f4bb3"
+dependencies = [
+ "cfg-if",
+ "core-foundation-sys",
+ "libc",
+ "ntapi",
+ "once_cell",
+ "rayon",
+ "windows 0.52.0",
+]
+
+[[package]]
+name = "sysinfo"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fc858248ea01b66f19d8e8a6d55f41deaf91e9d495246fd01368d99935c6c01"
@@ -5116,7 +5064,7 @@ dependencies = [
  "memchr",
  "ntapi",
  "rayon",
- "windows",
+ "windows 0.57.0",
 ]
 
 [[package]]
@@ -5188,10 +5136,11 @@ name = "test_wasm_smart_contracts"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "counter-no-state",
  "linera-base",
  "linera-sdk",
  "linera-service",
- "state-triviality",
+ "sysinfo 0.30.13",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -5365,6 +5314,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -5477,13 +5427,12 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
 name = "tonic"
-version = "0.12.3"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877c5b330756d856ffcc4553ab34a5684481ade925ecc54bcd1bf02b1d0d4d52"
+checksum = "eb7613188ce9f7df5bfe185db26c5814347d110db17920415cf2fbcad85e7203"
 dependencies = [
- "async-stream",
  "async-trait",
- "axum 0.7.9",
+ "axum",
  "base64 0.22.1",
  "bytes",
  "h2 0.4.12",
@@ -5495,25 +5444,60 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
- "prost",
  "rustls-native-certs",
- "rustls-pemfile 2.2.0",
- "socket2 0.5.10",
+ "socket2 0.6.0",
+ "sync_wrapper 1.0.2",
  "tokio",
  "tokio-rustls 0.26.2",
  "tokio-stream",
- "tower 0.4.13",
+ "tower 0.5.2",
  "tower-layer",
  "tower-service",
  "tracing",
- "webpki-roots 0.26.11",
+ "webpki-roots 1.0.2",
 ]
 
 [[package]]
 name = "tonic-build"
-version = "0.12.3"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9557ce109ea773b399c9b9e5dca39294110b74f1f342cb347a80d1fce8c26a11"
+checksum = "4c40aaccc9f9eccf2cd82ebc111adc13030d23e887244bc9cfa5d1d636049de3"
+dependencies = [
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "tonic-health"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a82868bf299e0a1d2e8dce0dc33a46c02d6f045b2c1f1d6cc8dc3d0bf1812ef"
+dependencies = [
+ "prost",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-prost",
+]
+
+[[package]]
+name = "tonic-prost"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66bd50ad6ce1252d87ef024b3d64fe4c3cf54a86fb9ef4c631fdd0ded7aeaa67"
+dependencies = [
+ "bytes",
+ "prost",
+ "tonic",
+]
+
+[[package]]
+name = "tonic-prost-build"
+version = "0.14.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4a16cba4043dc3ff43fcb3f96b4c5c154c64cbd18ca8dce2ab2c6a451d058a2"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -5521,49 +5505,37 @@ dependencies = [
  "prost-types",
  "quote",
  "syn 2.0.106",
-]
-
-[[package]]
-name = "tonic-health"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1eaf34ddb812120f5c601162d5429933c9b527d901ab0e7f930d3147e33a09b2"
-dependencies = [
- "async-stream",
- "prost",
- "tokio",
- "tokio-stream",
- "tonic",
+ "tempfile",
+ "tonic-build",
 ]
 
 [[package]]
 name = "tonic-reflection"
-version = "0.12.3"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "878d81f52e7fcfd80026b7fdb6a9b578b3c3653ba987f87f0dce4b64043cba27"
+checksum = "34da53e8387581d66db16ff01f98a70b426b091fdf76856e289d5c1bd386ed7b"
 dependencies = [
  "prost",
  "prost-types",
  "tokio",
  "tokio-stream",
  "tonic",
+ "tonic-prost",
 ]
 
 [[package]]
 name = "tonic-web"
-version = "0.12.3"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5299dd20801ad736dccb4a5ea0da7376e59cd98f213bf1c3d478cf53f4834b58"
+checksum = "75214f6b6bd28c19aa752ac09fdf0eea546095670906c21fe3940e180a4c43f2"
 dependencies = [
  "base64 0.22.1",
  "bytes",
  "http 1.3.1",
  "http-body 1.0.1",
- "http-body-util",
  "pin-project",
  "tokio-stream",
  "tonic",
- "tower-http 0.5.2",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -5571,9 +5543,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-web-wasm-client"
-version = "0.6.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8957be1a1c7aa12d4c9d67882060dd57aed816bbc553fa60949312e839f4a8ea"
+checksum = "898cd44be5e23e59d2956056538f1d6b3c5336629d384ffd2d92e76f87fb98ff"
 dependencies = [
  "base64 0.22.1",
  "byteorder",
@@ -5585,7 +5557,7 @@ dependencies = [
  "httparse",
  "js-sys",
  "pin-project",
- "thiserror 1.0.69",
+ "thiserror 2.0.16",
  "tonic",
  "tower-service",
  "wasm-bindgen",
@@ -5600,15 +5572,6 @@ version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8fa9be0de6cf49e536ce1851f987bd21a43b771b09473c3549a6c853db37c1c"
 dependencies = [
- "futures-core",
- "futures-util",
- "indexmap 1.9.3",
- "pin-project",
- "pin-project-lite",
- "rand 0.8.5",
- "slab",
- "tokio",
- "tokio-util",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -5622,28 +5585,15 @@ checksum = "d039ad9159c98b70ecfd540b2573b97f7f52c3e8d9f8ad57a24b916a536975f9"
 dependencies = [
  "futures-core",
  "futures-util",
+ "indexmap 2.11.3",
  "pin-project-lite",
+ "slab",
  "sync_wrapper 1.0.2",
  "tokio",
+ "tokio-util",
  "tower-layer",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "tower-http"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
-dependencies = [
- "bitflags 2.9.4",
- "bytes",
- "http 1.3.1",
- "http-body 1.0.1",
- "http-body-util",
- "pin-project-lite",
- "tower-layer",
- "tower-service",
 ]
 
 [[package]]
@@ -6168,15 +6118,6 @@ checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
 
 [[package]]
 name = "webpki-roots"
-version = "0.26.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
-dependencies = [
- "webpki-roots 1.0.2",
-]
-
-[[package]]
-name = "webpki-roots"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e8983c3ab33d6fb807cfcdad2491c4ea8cbc8ed839181c7dfd9c67c83e261b2"
@@ -6217,11 +6158,30 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e48a53791691ab099e5e2ad123536d0fff50652600abaf43bbf952894110d0be"
+dependencies = [
+ "windows-core 0.52.0",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows"
 version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12342cb4d8e3b046f3d80effd474a7a02447231330ef77d71daa6fbc40681143"
 dependencies = [
  "windows-core 0.57.0",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
+dependencies = [
  "windows-targets 0.52.6",
 ]
 
