@@ -22,7 +22,7 @@ cargo build
 
 
 git clone https://github.com/MathieuDutSik/linera-protocol_second
-cd linera-protocol_second && git checkout has_non_trivial_storage && cargo build && cd ..
+cd linera-protocol_second && cargo build && cd ..
 
 
 

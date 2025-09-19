@@ -23,7 +23,7 @@ fn get_critical_pids() -> Vec<(String, Pid)> {
     for (pid, process) in sys.processes() {
         let name = process.name().to_string();
         if name == "linera-server" || name == "linera-proxy" {
-            pids.push((name, pid.clone()));
+            pids.push((name, *pid));
         }
     }
     pids
@@ -34,7 +34,7 @@ fn print_memory_usage(pids: &[(String,Pid)]) {
     sys.refresh_processes();
 
     for (name, pid) in pids {
-        if let Some(p) = sys.process(pid.clone()) {
+        if let Some(p) = sys.process(*pid) {
             // memory() = RSS; virtual_memory() = virtual size (a.k.a. VMS)
             println!("name={name} pid={pid} RSS bytes: {}, Virtual bytes: {}", p.memory(), p.virtual_memory());
         }
@@ -83,7 +83,7 @@ async fn main() -> Result<()> {
     for i_iter in 0..n_iter {
 
         // Step 4: Call a mutation that takes the Vec<u8> of "contract", "service",
-        println!("Step 4: Calling CreateAndCall mutation with increment_value=5");
+        println!("------------- i_iter={i_iter}");
         let value = 5;
         let mutation_request = CounterRequest::Increment(value);
         application.run_json_query(&mutation_request).await?;
