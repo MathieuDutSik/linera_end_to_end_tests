@@ -1,5 +1,5 @@
 [package]
-name = "test_wasm_smart_contracts"
+name = "benchmark_repeated_fungibles"
 version = "0.1.0"
 edition = "2021"
 
