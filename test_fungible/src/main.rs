@@ -80,7 +80,7 @@ async fn end_to_end_repeated_transfer_fungible() -> Result<()> {
     let time_start = Instant::now();
     app_id.multiple_mutate(&mutations).await?;
     let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for transfer={average_time}");
+    println!("Average runtime for fungible transfer={average_time}");
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;
@@ -147,7 +147,7 @@ async fn end_to_end_repeated_transfer_fungible_no_graphql() -> Result<()> {
     let time_start = Instant::now();
     app_id.run_json_query(&query).await?;
     let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for transfer={average_time}");
+    println!("Average runtime for fungible-no-graphql transfer={average_time}");
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;
@@ -164,7 +164,7 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         eprintln!("Error: No test specified");
         eprintln!("Usage: {} <test-name>", args[0]);
-        eprintln!("Available tests: create-and-call, blob-access, all");
+        eprintln!("Available tests: repeated-fungible, repeated-fungible-no-graphql, all");
         std::process::exit(1);
     }
 
@@ -181,6 +181,7 @@ async fn main() -> Result<()> {
         }
         "all" => {
             println!("Running repeated-fungible / repeated-fungible-no-graphql test...");
+            end_to_end_repeated_transfer_fungible().await?;
             end_to_end_repeated_transfer_fungible_no_graphql().await?;
         }
         _ => {

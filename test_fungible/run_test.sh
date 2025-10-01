@@ -37,4 +37,4 @@ ln -sf $LINERA_PATH/target/release/linera-proxy target/release/linera-proxy
 
 echo "Running the fungible tests"
 cargo run --release all > output
-
+cat output
