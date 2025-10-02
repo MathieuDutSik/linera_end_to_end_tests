@@ -1,0 +1,19 @@
+[package]
+name = "benchmark_repeated_fungibles"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+
+# Linera dependencies from GitHub
+linera-base = { git = "https://github.com/linera-io/linera-protocol", features = ["test"] }
+linera-service = { git = "https://github.com/linera-io/linera-protocol", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
+
+# Example applications
+fungible = { path = "./smart_contract_code/fungible" }
+fungible-no-graphql = { path = "./smart_contract_code/fungible-no-graphql" }
