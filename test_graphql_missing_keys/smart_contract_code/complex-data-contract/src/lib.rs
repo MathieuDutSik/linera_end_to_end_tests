@@ -4,23 +4,32 @@
 /*! ABI of the Counter Example Application */
 
 use async_graphql::{Request, Response};
-use linera_sdk::linera_base_types::{ContractAbi, ServiceAbi};
+use linera_sdk::{
+    graphql::GraphQLMutationRoot,
+    linera_base_types::{ContractAbi, ServiceAbi},
+};
 use serde::{Deserialize, Serialize};
 
-pub struct CounterAbi;
+pub struct ComplexDataAbi;
 
-#[derive(Debug, Deserialize, Serialize)]
-pub enum CounterOperation {
-    /// Increment the counter by the given value
-    Increment { value: u64 },
+#[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
+pub enum ComplexDataOperation {
+    /// Field1 operation
+    SetField1 { value: u64 },
+    /// Field2 operation
+    InsertField2 { key: String, value: u8 },
+    /// Field3 operation
+    InsertField3 { keys: Vec<String>, value: u16 },
+    /// Field4 operation
+    InsertField4 { key1: String, key2: String, value: u64 },
 }
 
-impl ContractAbi for CounterAbi {
-    type Operation = CounterOperation;
-    type Response = u64;
+impl ContractAbi for ComplexDataAbi {
+    type Operation = ComplexDataOperation;
+    type Response = ();
 }
 
-impl ServiceAbi for CounterAbi {
+impl ServiceAbi for ComplexDataAbi {
     type Query = Request;
     type QueryResponse = Response;
 }
