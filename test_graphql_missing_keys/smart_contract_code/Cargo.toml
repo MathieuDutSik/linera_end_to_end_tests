@@ -1,8 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-    "complex-data-contract",
-]
+members = ["complex-data-contract"]
 
 [workspace.dependencies]
 anyhow = "1.0.80"
@@ -32,8 +30,7 @@ test-log = { version = "0.2.15", default-features = false, features = [
 ] }
 tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread"] }
 
-fungible = { path = "./fungible" }
-fungible-no-graphql = { path = "./fungible-no-graphql" }
+complex-data-contract = { path = "./complex-data-contract" }
 
 [profile.release]
 debug = true
