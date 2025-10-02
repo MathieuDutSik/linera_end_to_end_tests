@@ -10,10 +10,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
 # Linera dependencies from GitHub
-linera-base = { git = "https://github.com/linera-io/linera-protocol", features = ["test"] }
-linera-service = { git = "https://github.com/linera-io/linera-protocol", features = ["test", "storage-service", "wasmer"] }
-linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
+linera-base = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITnull_graph_ql/linera-protocol_second/linera-base", features = ["test"] }
+linera-service = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITnull_graph_ql/linera-protocol_second/linera-service", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITnull_graph_ql/linera-protocol_second/linera-sdk" }
 
 # Example applications
-fungible = { path = "./smart_contract_code/fungible" }
-fungible-no-graphql = { path = "./smart_contract_code/fungible-no-graphql" }
+complex-data-contract = { path = "./smart_contract_code/complex-data-contract" }

@@ -20,9 +20,9 @@ assert_matches.workspace = true
 linera-sdk = { workspace = true, features = ["test"] }
 
 [[bin]]
-name = "counter_contract"
+name = "complex_data_contract_contract"
 path = "src/contract.rs"
 
 [[bin]]
-name = "counter_service"
+name = "complex_data_contract_service"
 path = "src/service.rs"
