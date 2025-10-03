@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["complex-data-contract"]
+members = ["reported-solutions"]
 
 [workspace.dependencies]
 anyhow = "1.0.80"
@@ -17,7 +17,7 @@ getrandom = { version = "0.2.12", default-features = false, features = [
     "custom",
 ] }
 hex = "0.4.3"
-linera-sdk = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITnull_graph_ql/linera-protocol_second/linera-sdk" }
+linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
 log = "0.4.20"
 num-bigint = "0.4.3"
 num-traits = "0.2.16"
@@ -30,7 +30,7 @@ test-log = { version = "0.2.15", default-features = false, features = [
 ] }
 tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread"] }
 
-complex-data-contract = { path = "./complex-data-contract" }
+reported-solutions = { path = "./reported-solutions" }
 
 [profile.release]
 debug = true

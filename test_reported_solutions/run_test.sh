@@ -18,23 +18,22 @@ fi
 
 
 echo "Building WASM smart contract tester."
-cargo build --release
+cargo build
 
 if [ ! -d "linera-protocol" ]; then
     git clone https://github.com/linera-io/linera-protocol
 else
     echo "Directory already exists, skipping clone."
 fi
-cd linera-protocol && cargo build --release && cd ..
+cd linera-protocol && cargo build && cd ..
 
 
 
 echo "Linking linera binaries..."
 export LINERA_PATH=$PWD/linera-protocol
-ln -sf $LINERA_PATH/target/release/linera target/release/linera
-ln -sf $LINERA_PATH/target/release/linera-server target/release/linera-server
-ln -sf $LINERA_PATH/target/release/linera-proxy target/release/linera-proxy
+ln -sf $LINERA_PATH/target/debug/linera target/debug/linera
+ln -sf $LINERA_PATH/target/debug/linera-server target/debug/linera-server
+ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy
 
-echo "Running the fungible tests"
-cargo run --release all > output
-cat output
+echo "Running the test case"
+cargo run all

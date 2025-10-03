@@ -580,19 +580,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
-name = "complex-data-contract"
-version = "0.1.0"
-dependencies = [
- "assert_matches",
- "async-graphql",
- "futures",
- "linera-sdk",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2121,6 +2108,7 @@ checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 [[package]]
 name = "linera-base"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -2164,6 +2152,7 @@ dependencies = [
 [[package]]
 name = "linera-chain"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2187,6 +2176,7 @@ dependencies = [
 [[package]]
 name = "linera-core"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2225,6 +2215,7 @@ dependencies = [
 [[package]]
 name = "linera-execution"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2268,6 +2259,7 @@ checksum = "c9198100e9ce61acd3c714a2e61eb19fc5b8e2178dd645e2d9061e61e6e1feef"
 [[package]]
 name = "linera-sdk"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2295,6 +2287,7 @@ dependencies = [
 [[package]]
 name = "linera-sdk-derive"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "convert_case",
  "proc-macro2",
@@ -2304,6 +2297,7 @@ dependencies = [
 [[package]]
 name = "linera-storage"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "async-trait",
  "bcs",
@@ -2324,6 +2318,7 @@ dependencies = [
 [[package]]
 name = "linera-storage-service"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -2348,6 +2343,7 @@ dependencies = [
 [[package]]
 name = "linera-version"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2368,6 +2364,7 @@ dependencies = [
 [[package]]
 name = "linera-views"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2402,6 +2399,7 @@ dependencies = [
 [[package]]
 name = "linera-views-derive"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "cfg_aliases",
  "deluxe",
@@ -2550,6 +2548,7 @@ dependencies = [
 [[package]]
 name = "linera-witty"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "anyhow",
  "cfg_aliases",
@@ -2564,6 +2563,7 @@ dependencies = [
 [[package]]
 name = "linera-witty-macros"
 version = "0.16.0"
+source = "git+https://github.com/linera-io/linera-protocol#a78abb6fb4d8aea539116059a94d7e2a688be9f6"
 dependencies = [
  "cfg_aliases",
  "heck 0.4.1",
@@ -3357,6 +3357,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71fe3824f5629716b1589be05dacd749f6aa084c87e00e016714a8cdfccc997c"
 dependencies = [
  "bytecheck",
+]
+
+[[package]]
+name = "reported-solutions"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "async-graphql",
+ "linera-sdk",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
