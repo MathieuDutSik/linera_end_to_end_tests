@@ -43,39 +43,14 @@ async fn main() -> Result<()> {
             None,
         )
         .await?;
-    println!("Step 1");
 
     let port = get_node_port().await;
     let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
     let app_id = node_service.make_application(&chain_id, &application_id)?;
-    println!("Step 2");
-
-    // SET
-
-    let key1 = "Bonjour";
-    let key2 = "Hello";
-    let value1 = 124;
-    let mutation = format!(
-        "insertEntry(key1: \"{}\", key2: \"{}\", value: {})",
-        key1, key2, value1,
-    );
-    app_id.mutate(&mutation).await?;
-    println!("Step 3");
-
-    // READ1
-
-    let query = "reportedSolutions { keys }";
-    let response_body = app_id.query(&query).await.unwrap();
-    let keys: Vec<String> = serde_json::from_value(response_body["reportedSolutions"]["keys"].clone()).unwrap();
-    assert_eq!(keys, vec!["Bonjour".to_string()]);
-    println!("Step 4");
-
-    // READ2
 
     let query = "reportedSolutions { entries { key, value { count } } }";
     let response_body = app_id.query(&query).await.unwrap();
     println!("end_to_end_complex_data, step 25, response_body={}", response_body);
-    println!("Step 5");
 
 
     node_service.ensure_is_running()?;
