@@ -46,6 +46,9 @@ impl Contract for ComplexDataContract {
             SetField1 { value } => {
                 self.state.field1.set(value);
             },
+            InsertPrefield2 { key, value } => {
+                self.state.prefield2.insert(&key, value).unwrap();
+            },
             InsertField2 { key, value } => {
                 let subview = self.state.field2.load_entry_mut(&key).await.unwrap();
                 subview.set(value);

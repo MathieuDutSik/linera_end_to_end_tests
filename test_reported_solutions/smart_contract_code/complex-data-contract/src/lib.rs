@@ -16,6 +16,8 @@ pub struct ComplexDataAbi;
 pub enum ComplexDataOperation {
     /// Field1 operation
     SetField1 { value: u64 },
+    /// Prefield2 operation
+    InsertPrefield2 { key: String, value: u8 },
     /// Field2 operation
     InsertField2 { key: String, value: u8 },
     /// Field3 operation
