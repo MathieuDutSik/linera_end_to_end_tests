@@ -12,7 +12,7 @@ use complex_data_contract::{ComplexDataAbi, ComplexDataOperation};
 
 
 #[tokio::test]
-async fn single_transaction() {
+async fn test_queries() {
     let (validator, module_id) =
         TestValidator::with_current_module::<ComplexDataAbi, (), ()>().await;
 
@@ -47,9 +47,8 @@ async fn single_transaction() {
     for query in queries {
         println!("query={}", query);
         let new_query = format!("query {{ {} }}", query);
-        println!("new_query={}", new_query);
         let QueryOutcome { response, .. } = chain.graphql_query(application_id, new_query).await;
         println!("response={response}");
-        println!("");
+        println!();
     }
 }
