@@ -7,9 +7,5 @@ use linera_sdk::views::{linera_views, RegisterView, CollectionView, LogView, Map
 #[derive(RootView, async_graphql::SimpleObject)]
 #[view(context = ViewStorageContext)]
 pub struct ComplexDataState {
-    pub field1: RegisterView<u64>,
-    pub prefield2: MapView<String, u8>,
-    pub field2: CollectionView<String, RegisterView<u8>>,
-    pub field3: CollectionView<Vec<String>, LogView<u16>>,
     pub field4: CollectionView<String, MapView<String, u64>>,
 }

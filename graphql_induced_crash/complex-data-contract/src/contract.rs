@@ -43,20 +43,6 @@ impl Contract for ComplexDataContract {
 
     async fn execute_operation(&mut self, operation: ComplexDataOperation) {
         match operation {
-            SetField1 { value } => {
-                self.state.field1.set(value);
-            },
-            InsertPrefield2 { key, value } => {
-                self.state.prefield2.insert(&key, value).unwrap();
-            },
-            InsertField2 { key, value } => {
-                let subview = self.state.field2.load_entry_mut(&key).await.unwrap();
-                subview.set(value);
-            },
-            InsertField3 { keys, value } => {
-                let subview = self.state.field3.load_entry_mut(&keys).await.unwrap();
-                subview.push(value);
-            },
             InsertField4 { key1, key2, value } => {
                 let subview = self.state.field4.load_entry_mut(&key1).await.unwrap();
                 subview.insert(&key2, value).unwrap();

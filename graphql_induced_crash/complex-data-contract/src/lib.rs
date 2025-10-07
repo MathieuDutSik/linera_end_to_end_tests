@@ -14,14 +14,6 @@ pub struct ComplexDataAbi;
 
 #[derive(Debug, Deserialize, Serialize, GraphQLMutationRoot)]
 pub enum ComplexDataOperation {
-    /// Field1 operation
-    SetField1 { value: u64 },
-    /// Prefield2 operation
-    InsertPrefield2 { key: String, value: u8 },
-    /// Field2 operation
-    InsertField2 { key: String, value: u8 },
-    /// Field3 operation
-    InsertField3 { keys: Vec<String>, value: u16 },
     /// Field4 operation
     InsertField4 { key1: String, key2: String, value: u64 },
 }
