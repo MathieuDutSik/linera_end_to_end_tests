@@ -445,6 +445,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "benchmark_repeated_fungibles"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fungible",
+ "fungible-no-graphql",
+ "linera-base",
+ "linera-sdk",
+ "linera-service",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5487,21 +5502,6 @@ dependencies = [
  "quote",
  "structmeta",
  "syn 2.0.106",
-]
-
-[[package]]
-name = "test_wasm_smart_contracts"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fungible",
- "fungible-no-graphql",
- "linera-base",
- "linera-sdk",
- "linera-service",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

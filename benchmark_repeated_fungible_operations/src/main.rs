@@ -1,7 +1,7 @@
 use anyhow::Result;
 use linera_base::{
     data_types::Amount,
-    identifiers::Account,
+    identifiers::{Account, AccountOwner},
     vm::VmRuntime,
     time::Instant,
 };
@@ -156,6 +156,123 @@ async fn end_to_end_repeated_transfer_fungible_no_graphql() -> Result<()> {
     Ok(())
 }
 
+async fn end_to_end_repeated_transfer_native_fungible() -> Result<()> {
+    let num_operations = 500;
+    use fungible::{NativeFungibleTokenAbi, InitialState, Parameters};
+    let config = get_config();
+
+    tracing::info!("Starting repeated transfer in fungible");
+    let (mut net, client) = config.instantiate().await?;
+
+    let chain_id = client.load_wallet()?.default_chain().unwrap();
+
+    let account_owner1 = client.get_owner().unwrap();
+    let account_owner2 = client.keygen().await?;
+
+
+    let (contract_path, service_path) = build_application(&client, "native-fungible").await?;
+
+
+    let params = Parameters::new("NAT");
+    let accounts = BTreeMap::from([
+        (account_owner1, Amount::from_tokens(1000)),
+    ]);
+    let state = InitialState { accounts };
+    let application_id = client
+        .publish_and_create::<NativeFungibleTokenAbi, Parameters, InitialState>(
+            contract_path,
+            service_path,
+            VmRuntime::Wasm,
+            &params,
+            &state,
+            &[],
+            None,
+        )
+        .await?;
+
+    let port = get_node_port().await;
+    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
+    let app_id = node_service.make_application(&chain_id, &application_id)?;
+
+    let amount_transfer = Amount::ONE;
+    let destination = Account {
+        chain_id,
+        owner: account_owner2,
+    };
+    let mutation = format!(
+        "transfer(owner: {}, amount: \"{}\", targetAccount: {})",
+        account_owner1.to_value(),
+        amount_transfer,
+        destination.to_value(),
+    );
+    let mutations = vec![mutation; num_operations];
+    let time_start = Instant::now();
+    app_id.multiple_mutate(&mutations).await?;
+    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
+    println!("Average runtime for transfer={average_time}");
+
+    node_service.ensure_is_running()?;
+    net.ensure_is_running().await?;
+    net.terminate().await?;
+    println!("Successful end for repeated-native-fungible");
+    Ok(())
+}
+
+async fn end_to_end_repeated_native_transfer() -> Result<()> {
+    let num_operations = 500;
+    let config = get_config();
+
+    tracing::info!("Starting repeated transfer in fungible");
+    let (mut net, client) = config.instantiate().await?;
+
+    let chain_id = client.load_wallet()?.default_chain().unwrap();
+
+    let account_owner1 = client.get_owner().unwrap();
+    let account_owner2 = client.keygen().await?;
+
+
+    let port = get_node_port().await;
+    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
+
+    node_service
+        .transfer(
+            chain_id,
+            AccountOwner::CHAIN,
+            Account { chain_id, owner: account_owner1 },
+            Amount::from_tokens(num_operations + 10),
+        )
+        .await?;
+
+    let recipient = Account {
+        chain_id,
+        owner: account_owner2,
+    };
+    let amount = Amount::ONE;
+
+    let mut query = String::from("mutation {\n");
+    let op = format!("transfer(chainId: \"{chain_id}\", owner: {}, recipient: {}, amount: \"{amount}\")",
+                     account_owner1.to_value(), recipient.to_value());
+    for index in 0..num_operations {
+        query = format!("{}  u{}: {}\n", query, index, op);
+    }
+    query.push_str("}\n");
+
+    let time_start = Instant::now();
+    let _data = node_service.query_node(&query).await?;
+    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
+    println!("Average runtime for transfer={average_time}");
+
+    node_service.ensure_is_running()?;
+    net.ensure_is_running().await?;
+    net.terminate().await?;
+    println!("Successful end for repeated-native-transfer");
+//    println!("data={data}");
+    Ok(())
+}
+
+
+
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -179,14 +296,16 @@ async fn main() -> Result<()> {
             println!("Running repeated-fungible-no-graphql test...");
             end_to_end_repeated_transfer_fungible_no_graphql().await?;
         }
-        "all" => {
-            println!("Running repeated-fungible / repeated-fungible-no-graphql test...");
-            end_to_end_repeated_transfer_fungible().await?;
-            end_to_end_repeated_transfer_fungible_no_graphql().await?;
+        "repeated-native-transfer" => {
+            println!("Running repeated-native-transfer test...");
+            end_to_end_repeated_native_transfer().await?;
+        }
+        "repeated-native-fungible" => {
+            println!("Running repeated-native-fungible test...");
+            end_to_end_repeated_transfer_native_fungible().await?;
         }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);
-            eprintln!("Available tests: create-and-call, blob-access, all");
             std::process::exit(1);
         }
     }

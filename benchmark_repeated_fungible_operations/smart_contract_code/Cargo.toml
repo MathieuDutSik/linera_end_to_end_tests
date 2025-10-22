@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "native-fungible",
     "fungible",
     "fungible-no-graphql",
 ]
@@ -35,6 +36,7 @@ test-log = { version = "0.2.15", default-features = false, features = [
 ] }
 tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread"] }
 
+native-fungible = { path = "./native-fungible" }
 fungible = { path = "./fungible" }
 fungible-no-graphql = { path = "./fungible-no-graphql" }
 
