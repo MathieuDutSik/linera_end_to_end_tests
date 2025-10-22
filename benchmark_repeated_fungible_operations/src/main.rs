@@ -209,7 +209,7 @@ async fn end_to_end_repeated_transfer_native_fungible() -> Result<()> {
     let time_start = Instant::now();
     app_id.multiple_mutate(&mutations).await?;
     let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for transfer={average_time}");
+    println!("Average runtime for native-fungible transfer={average_time}");
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;
@@ -222,7 +222,7 @@ async fn end_to_end_repeated_native_transfer() -> Result<()> {
     let num_operations = 500;
     let config = get_config();
 
-    tracing::info!("Starting repeated transfer in fungible");
+    tracing::info!("Starting repeated transfer using node_service");
     let (mut net, client) = config.instantiate().await?;
 
     let chain_id = client.load_wallet()?.default_chain().unwrap();
@@ -260,7 +260,7 @@ async fn end_to_end_repeated_native_transfer() -> Result<()> {
     let time_start = Instant::now();
     let _data = node_service.query_node(&query).await?;
     let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for transfer={average_time}");
+    println!("Average runtime for node-service transfer={average_time}");
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;

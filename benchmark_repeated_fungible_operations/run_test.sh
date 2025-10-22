@@ -36,5 +36,9 @@ ln -sf $LINERA_PATH/target/release/linera-server target/release/linera-server
 ln -sf $LINERA_PATH/target/release/linera-proxy target/release/linera-proxy
 
 echo "Running the fungible tests"
-cargo run --release all > output
-cat output
+cargo run --release repeated-fungible > output_repeated_fungible
+cargo run --release repeated-fungible-no-graphql > output_repeated_fungible_no_graphql
+cargo run --release repeated-native-transfer > output_repeated_native_transfer
+cargo run --release repeated-native-fungible > output_repeated_native_fungible
+cat output*
+
