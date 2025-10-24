@@ -1,5 +1,5 @@
 [package]
-name = "benchmark_repeated_fungibles"
+name = "benchmark_multi_read"
 version = "0.1.0"
 edition = "2021"
 
