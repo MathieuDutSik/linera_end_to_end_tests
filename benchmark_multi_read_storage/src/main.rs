@@ -33,7 +33,12 @@ where
     S: TestKeyValueDatabase,
     S::Store: Clone + KeyValueStore,
 {
-    let name = S::get_name();
+    let big_name = S::get_name();
+    let l_str = big_name
+        .split(' ')
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>();
+    let name = l_str[l_str.len() - 2].clone();
     let mut rng = rand::rngs::StdRng::seed_from_u64(134 as u64);
     let mut key_values1 = Vec::new();
     let mut key_values2 = Vec::new();
@@ -56,7 +61,7 @@ where
         batch.put_key_value_bytes(key, value);
     }
     store1.write_batch(batch).await?;
-    println!("Runtime {name} for   multi write: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for   multi write: {} micros", time.elapsed().as_micros() as f64);
 
     //
     // Direct write
@@ -68,7 +73,7 @@ where
         batch.put_key_value_bytes(key, value);
         store2.write_batch(batch).await?;
     }
-    println!("Runtime {name} for    loop write: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for    loop write: {} micros", time.elapsed().as_micros() as f64);
 
     //
     // Futures write
@@ -85,7 +90,7 @@ where
         });
     }
     futures::future::try_join_all(futures).await?;
-    println!("Runtime {name} for futures write: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for futures write: {} micros", time.elapsed().as_micros() as f64);
     Ok(())
 }
 
@@ -97,8 +102,13 @@ where
     S: TestKeyValueDatabase,
     S::Store: Clone + KeyValueStore,
 {
+    let big_name = S::get_name();
+    let l_str = big_name
+        .split(' ')
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>();
+    let name = l_str[l_str.len() - 2].clone();
     let store = S::new_test_store().await?;
-    let name = S::get_name();
     let mut batch = Batch::new();
     let mut rng = rand::rngs::StdRng::seed_from_u64(134 as u64);
     let mut keys1 = Vec::new();
@@ -118,7 +128,7 @@ where
     //
     let time = Instant::now();
     let values: Vec<Option<Vec<u8>>> = store.read_multi_values_bytes(keys1).await?;
-    println!("Runtime {name} for   multi read: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for   multi read: {} micros", time.elapsed().as_micros() as f64);
     assert_eq!(values, read_values);
     //
     let time = Instant::now();
@@ -126,7 +136,7 @@ where
     for key in keys2 {
         values.push(store.read_value_bytes(&key).await?);
     }
-    println!("Runtime {name} for    loop read: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for    loop read: {} micros", time.elapsed().as_micros() as f64);
     assert_eq!(values, read_values);
     //
     let time = Instant::now();
@@ -136,7 +146,7 @@ where
         futures.push(async move { store.read_value_bytes(&key).await });
     }
     let values: Vec<Option<Vec<u8>>> = futures::future::try_join_all(futures).await?;
-    println!("Runtime {name} for futures read: {}ms", time.elapsed().as_micros() as f64);
+    println!("Runtime {name} for futures read: {} micros", time.elapsed().as_micros() as f64);
     assert_eq!(values, read_values);
     //
     Ok(())
