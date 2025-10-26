@@ -5,15 +5,25 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+async-trait = "0.1.77"
+fs-err = "2.11.0"
+serde_json = "1.0.114"
+tempfile = "3.20.0"
+tonic = { version = "0.14", default-features = false }
+tonic-health = "0.14"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
 # Linera dependencies from GitHub
 linera-base = { git = "https://github.com/linera-io/linera-protocol", features = ["test"] }
-linera-service = { git = "https://github.com/linera-io/linera-protocol", features = ["test", "storage-service", "wasmer"] }
+linera-service = { git = "https://github.com/linera-io/linera-protocol", features = ["test", "scylladb", "wasmer"] }
+linera-client = { git = "https://github.com/linera-io/linera-protocol" }
+linera-core = { git = "https://github.com/linera-io/linera-protocol" }
 linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
+linera-rpc = { git = "https://github.com/linera-io/linera-protocol" }
+linera-views = { git = "https://github.com/linera-io/linera-protocol" }
+linera-storage-service = { git = "https://github.com/linera-io/linera-protocol" }
 
 # Example applications
-fungible = { path = "./smart_contract_code/fungible" }
-fungible-no-graphql = { path = "./smart_contract_code/fungible-no-graphql" }
+social = { path = "./smart_contract_code/social" }

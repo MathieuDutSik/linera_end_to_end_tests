@@ -1,20 +1,14 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(with_testing)]
-use std::sync::LazyLock;
 use std::{
     collections::BTreeMap,
     env,
     num::NonZeroU16,
-    path::{Path, PathBuf},
-    sync::Arc,
     time::Duration,
 };
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
-#[cfg(with_testing)]
-use async_lock::RwLock;
 use async_trait::async_trait;
 use linera_base::{
     command::{resolve_binary, CommandExt},
@@ -23,13 +17,8 @@ use linera_base::{
 use linera_client::client_options::ResourceControlPolicyConfig;
 use linera_core::node::ValidatorNodeProvider;
 use linera_rpc::config::{CrossChainConfig, ExporterServiceConfig, TlsConfig};
-#[cfg(all(feature = "storage-service", with_testing))]
 use linera_storage_service::common::storage_service_test_endpoint;
-#[cfg(all(feature = "rocksdb", feature = "scylladb", with_testing))]
-use linera_views::rocks_db::{RocksDbDatabase, RocksDbSpawnMode};
-#[cfg(all(feature = "scylladb", with_testing))]
 use linera_views::{scylla_db::ScyllaDbDatabase, store::TestKeyValueDatabase as _};
-use tempfile::{tempdir, TempDir};
 use tokio::process::{Child, Command};
 use tonic::transport::{channel::ClientTlsConfig, Endpoint};
 use tonic_health::pb::{
@@ -37,9 +26,10 @@ use tonic_health::pb::{
 };
 use tracing::{error, info, warn};
 
-use crate::{
+use linera_service::{
     cli_wrappers::{
         ClientWrapper, LineraNet, LineraNetConfig, Network, NetworkConfig, OnClientDrop,
+        local_net::PathProvider,
     },
     config::{BlockExporterConfig, Destination, DestinationConfig},
     storage::{InnerStorageConfig, StorageConfig},
@@ -51,78 +41,24 @@ const MAX_NUMBER_SHARDS: usize = 1000;
 
 pub const FIRST_PUBLIC_PORT: usize = 13000;
 
-pub enum ProcessInbox {
-    Skip,
-    Automatic,
-}
 
-#[cfg(with_testing)]
-static PORT_PROVIDER: LazyLock<RwLock<u16>> = LazyLock::new(|| RwLock::new(7080));
-
-/// Provides a port for the node service. Increment the port numbers.
-#[cfg(with_testing)]
-pub async fn get_node_port() -> u16 {
-    let mut port = PORT_PROVIDER.write().await;
-    let port_ret = *port;
-    *port += 1;
-    info!("get_node_port returning port_ret={}", port_ret);
-    assert!(port_selector::is_free(port_ret));
-    port_ret
-}
-
-#[cfg(with_testing)]
 async fn make_testing_config(database: Database) -> Result<InnerStorageConfig> {
     match database {
         Database::Service => {
-            #[cfg(feature = "storage-service")]
-            {
-                let endpoint = storage_service_test_endpoint()
-                    .expect("Reading LINERA_STORAGE_SERVICE environment variable");
-                Ok(InnerStorageConfig::Service { endpoint })
-            }
-            #[cfg(not(feature = "storage-service"))]
-            panic!("Database::Service is selected without the feature storage_service");
-        }
-        Database::DynamoDb => {
-            #[cfg(feature = "dynamodb")]
-            {
-                let use_dynamodb_local = true;
-                Ok(InnerStorageConfig::DynamoDb { use_dynamodb_local })
-            }
-            #[cfg(not(feature = "dynamodb"))]
-            panic!("Database::DynamoDb is selected without the feature dynamodb");
+            let endpoint = storage_service_test_endpoint()
+                .expect("Reading LINERA_STORAGE_SERVICE environment variable");
+            Ok(InnerStorageConfig::Service { endpoint })
         }
         Database::ScyllaDb => {
-            #[cfg(feature = "scylladb")]
-            {
-                let config = ScyllaDbDatabase::new_test_config().await?;
-                Ok(InnerStorageConfig::ScyllaDb {
-                    uri: config.inner_config.uri,
-                })
-            }
-            #[cfg(not(feature = "scylladb"))]
-            panic!("Database::ScyllaDb is selected without the feature scylladb");
-        }
-        Database::DualRocksDbScyllaDb => {
-            #[cfg(all(feature = "rocksdb", feature = "scylladb"))]
-            {
-                let rocksdb_config = RocksDbDatabase::new_test_config().await?;
-                let scylla_config = ScyllaDbDatabase::new_test_config().await?;
-                let spawn_mode = RocksDbSpawnMode::get_spawn_mode_from_runtime();
-                Ok(InnerStorageConfig::DualRocksDbScyllaDb {
-                    path_with_guard: rocksdb_config.inner_config.path_with_guard,
-                    spawn_mode,
-                    uri: scylla_config.inner_config.uri,
-                })
-            }
-            #[cfg(not(all(feature = "rocksdb", feature = "scylladb")))]
-            panic!("Database::DualRocksDbScyllaDb is selected without the features rocksdb and scylladb");
+            let config = ScyllaDbDatabase::new_test_config().await?;
+            Ok(InnerStorageConfig::ScyllaDb {
+                uri: config.inner_config.uri,
+            })
         }
     }
 }
 
 pub enum InnerStorageConfigBuilder {
-    #[cfg(with_testing)]
     TestConfig,
     ExistingConfig {
         storage_config: InnerStorageConfig,
@@ -130,49 +66,11 @@ pub enum InnerStorageConfigBuilder {
 }
 
 impl InnerStorageConfigBuilder {
-    #[cfg_attr(not(with_testing), expect(unused_variables))]
     pub async fn build(self, database: Database) -> Result<InnerStorageConfig> {
         match self {
-            #[cfg(with_testing)]
             InnerStorageConfigBuilder::TestConfig => make_testing_config(database).await,
             InnerStorageConfigBuilder::ExistingConfig { storage_config } => Ok(storage_config),
         }
-    }
-}
-
-/// Path used for the run can come from a path whose lifetime is controlled
-/// by an external user or as a temporary directory
-#[derive(Clone)]
-pub enum PathProvider {
-    ExternalPath { path_buf: PathBuf },
-    TemporaryDirectory { tmp_dir: Arc<TempDir> },
-}
-
-impl PathProvider {
-    pub fn path(&self) -> &Path {
-        match self {
-            PathProvider::ExternalPath { path_buf } => path_buf.as_path(),
-            PathProvider::TemporaryDirectory { tmp_dir } => tmp_dir.path(),
-        }
-    }
-
-    pub fn create_temporary_directory() -> Result<Self> {
-        let tmp_dir = Arc::new(tempdir()?);
-        Ok(PathProvider::TemporaryDirectory { tmp_dir })
-    }
-
-    pub fn from_path_option(path: &Option<String>) -> anyhow::Result<Self> {
-        Ok(match path {
-            None => {
-                let tmp_dir = Arc::new(tempfile::tempdir()?);
-                PathProvider::TemporaryDirectory { tmp_dir }
-            }
-            Some(path) => {
-                let path = Path::new(path);
-                let path_buf = path.to_path_buf();
-                PathProvider::ExternalPath { path_buf }
-            }
-        })
     }
 }
 
@@ -245,9 +143,7 @@ const SERVER_ENV: &str = "LINERA_SERVER_PARAMS";
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum Database {
     Service,
-    DynamoDb,
     ScyllaDb,
-    DualRocksDbScyllaDb,
 }
 
 /// The processes of a running validator.
@@ -287,7 +183,6 @@ impl Validator {
         self.servers.push(server)
     }
 
-    #[cfg(with_testing)]
     async fn terminate_server(&mut self, index: usize) -> Result<()> {
         let mut server = self.servers.remove(index);
         server
@@ -350,7 +245,7 @@ impl LineraNetConfig for SpecifiedLocalNetConfig {
 
     async fn instantiate(self) -> Result<(Self::Net, ClientWrapper)> {
         let storage_config = self.storage_config_builder.build(self.database).await?;
-        let mut net = LocalNet::new(
+        let mut net = SpecifiedLocalNet::new(
             self.network,
             self.testing_prng_seed,
             self.namespace,
@@ -459,10 +354,9 @@ impl SpecifiedLocalNet {
         Ok(command)
     }
 
-    #[cfg(with_testing)]
     pub fn genesis_config(&self) -> Result<linera_client::config::GenesisConfig> {
         let path = self.path_provider.path();
-        crate::util::read_json(path.join("genesis.json"))
+        linera_service::util::read_json(path.join("genesis.json"))
     }
 
     fn shard_port(&self, validator: usize, shard: usize) -> usize {
@@ -497,6 +391,15 @@ impl SpecifiedLocalNet {
         FIRST_PUBLIC_PORT + exporter_id + 1
     }
 
+    fn toml(network: Network) -> &'static str {
+        match network {
+            Network::Grpc => "{ Grpc = \"ClearText\" }",
+            Network::Grpcs => "{ Grpc = \"Tls\" }",
+            Network::Tcp => "{ Simple = \"Tcp\" }",
+            Network::Udp => "{ Simple = \"Udp\" }",
+        }
+    }
+
     fn configuration_string(&self, server_number: usize) -> Result<String> {
         let n = server_number;
         let path = self
@@ -504,8 +407,8 @@ impl SpecifiedLocalNet {
             .path()
             .join(format!("validator_{n}.toml"));
         let port = self.proxy_public_port(n, 0);
-        let external_protocol = self.network.external.toml();
-        let internal_protocol = self.network.internal.toml();
+        let external_protocol = Self::toml(self.network.external);
+        let internal_protocol = Self::toml(self.network.internal);
         let external_host = self.network.external.localhost();
         let internal_host = self.network.internal.localhost();
         let mut content = format!(

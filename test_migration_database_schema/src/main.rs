@@ -1,26 +1,23 @@
 mod specified_local_net;
-use specified_local_net::{SpecifiedLocalNetConfig};
+use specified_local_net::{Database, SpecifiedLocalNetConfig};
 
 use anyhow::Result;
 use linera_base::{
     data_types::Amount,
     identifiers::{Account, AccountOwner},
     vm::VmRuntime,
-    time::Instant,
 };
 
 use linera_service::cli_wrappers::{
-    local_net::{get_node_port, ProcessInbox, Database},
+    local_net::{get_node_port, ProcessInbox},
     LineraNet, LineraNetConfig, Network,
 };
-use linera_service::cli_wrappers::ClientWrapper;
+use linera_service::cli_wrappers::{ClientWrapper, NotificationsExt};
 use std::path::PathBuf;
-use linera_base::async_graphql::InputType;
-//use linera_base::async_graphql::ScalarType;
-use std::{collections::BTreeMap, env};
+use std::env;
 
 fn get_config() -> SpecifiedLocalNetConfig {
-    let mut config = SpeficiedLocalNetConfig::new_test(Database::ScyllaDb, Network::Grpc);
+    let mut config = SpecifiedLocalNetConfig::new_test(Database::ScyllaDb, Network::Grpc);
     config.num_initial_validators = 4;
     config.num_shards = 4;
     config
@@ -31,251 +28,103 @@ async fn build_application(client: &ClientWrapper, name: &str) -> Result<(PathBu
     Ok(client.build_application(&path, name, true).await?)
 }
 
-async fn end_to_end_repeated_transfer_fungible() -> Result<()> {
-    let num_operations = 500;
-    use fungible::{FungibleTokenAbi, InitialState, Parameters};
+
+
+async fn test_wasm_end_to_end_social_event_streams() -> Result<()> {
+    use social::SocialAbi;
+
     let config = get_config();
+    let (mut net, client1) = config.instantiate().await?;
 
-    tracing::info!("Starting repeated transfer in fungible");
-    let (mut net, client) = config.instantiate().await?;
+    let client2 = net.make_client().await;
+    client2.wallet_init(None).await?;
 
-    let chain_id = client.load_wallet()?.default_chain().unwrap();
-
-    let account_owner1 = client.get_owner().unwrap();
-    let account_owner2 = client.keygen().await?;
-
-
-    let (contract_path, service_path) = build_application(&client, "fungible").await?;
-
-
-    let params = Parameters::new("NAT");
-    let accounts = BTreeMap::from([
-        (account_owner1, Amount::from_tokens(1000)),
-    ]);
-    let state = InitialState { accounts };
-    let application_id = client
-        .publish_and_create::<FungibleTokenAbi, Parameters, InitialState>(
-            contract_path,
-            service_path,
-            VmRuntime::Wasm,
-            &params,
-            &state,
-            &[],
-            None,
-        )
+    // We use a newly opened chain for the publisher, so that client2 will not be listening to that
+    // chain by default.
+    let chain1 = client1
+        .open_and_assign(&client1, Amount::from_tokens(100))
+        .await?;
+    let chain2 = client1.open_and_assign(&client2, Amount::ONE).await?;
+    let (contract, service) = build_application(&client1, "social").await?;
+    let module_id = client1
+        .publish_module::<SocialAbi, (), ()>(contract, service, VmRuntime::Wasm, None)
+        .await?;
+    let application_id = client1
+        .create_application(&module_id, &(), &(), &[], None)
         .await?;
 
-    let port = get_node_port().await;
-    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-    let app_id = node_service.make_application(&chain_id, &application_id)?;
-
-    let amount_transfer = Amount::ONE;
-    let destination = Account {
-        chain_id,
-        owner: account_owner2,
-    };
-    let mutation = format!(
-        "transfer(owner: {}, amount: \"{}\", targetAccount: {})",
-        account_owner1.to_value(),
-        amount_transfer,
-        destination.to_value(),
-    );
-    let mutations = vec![mutation; num_operations];
-    let time_start = Instant::now();
-    app_id.multiple_mutate(&mutations).await?;
-    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for fungible transfer={average_time}");
-
-    node_service.ensure_is_running()?;
-    net.ensure_is_running().await?;
-    net.terminate().await?;
-    println!("Successful end");
-    Ok(())
-}
-
-
-async fn end_to_end_repeated_transfer_fungible_no_graphql() -> Result<()> {
-    let num_operations = 500;
-    use fungible_no_graphql::{FungibleNoGraphQlTokenAbi, FungibleOperation, FungibleNoGraphQlRequest};
-    use fungible::{InitialState, Parameters};
-    let config = get_config();
-
-    tracing::info!("Starting repeated transfer in fungible");
-    let (mut net, client) = config.instantiate().await?;
-
-    let chain_id = client.load_wallet()?.default_chain().unwrap();
-
-    let account_owner1 = client.get_owner().unwrap();
-    let account_owner2 = client.keygen().await?;
-
-
-    let (contract_path, service_path) = build_application(&client, "fungible-no-graphql").await?;
-
-
-    let params = Parameters::new("NAT");
-    let accounts = BTreeMap::from([
-        (account_owner1, Amount::from_tokens(1000)),
-    ]);
-    let state = InitialState { accounts };
-    let application_id = client
-        .publish_and_create::<FungibleNoGraphQlTokenAbi, Parameters, InitialState>(
-            contract_path,
-            service_path,
-            VmRuntime::Wasm,
-            &params,
-            &state,
-            &[],
-            None,
-        )
+    let port1 = get_node_port().await;
+    let port2 = get_node_port().await;
+    let mut node_service1 = client1
+        .run_node_service(port1, ProcessInbox::Automatic)
+        .await?;
+    let mut node_service2 = client2
+        .run_node_service(port2, ProcessInbox::Automatic)
         .await?;
 
-    let port = get_node_port().await;
-    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-    let app_id = node_service.make_application(&chain_id, &application_id)?;
+    let app2 = node_service2.make_application(&chain2, &application_id)?;
+    app2.mutate(format!("subscribe(chainId: \"{chain1}\")"))
+        .await?;
+    let (_, height2) = node_service2.chain_tip(chain2).await?.unwrap();
 
-    let amount = Amount::ONE;
-    let target_account = Account {
-        chain_id,
-        owner: account_owner2,
-    };
-    let mut operations = Vec::new();
-    for _ in 0..num_operations {
-        operations.push(FungibleOperation::Transfer {
-            owner: account_owner1,
-            amount,
-            target_account,
-        });
-    }
-    let query = FungibleNoGraphQlRequest::Operations { operations };
+    let mut notifications = node_service2.notifications(chain2).await?;
 
-    let time_start = Instant::now();
-    app_id.run_json_query(&query).await?;
-    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for fungible-no-graphql transfer={average_time}");
-
-    node_service.ensure_is_running()?;
-    net.ensure_is_running().await?;
-    net.terminate().await?;
-    println!("Successful end");
-    Ok(())
-}
-
-async fn end_to_end_repeated_transfer_native_fungible() -> Result<()> {
-    let num_operations = 500;
-    use fungible::{NativeFungibleTokenAbi, InitialState, Parameters};
-    let config = get_config();
-
-    tracing::info!("Starting repeated transfer in fungible");
-    let (mut net, client) = config.instantiate().await?;
-
-    let chain_id = client.load_wallet()?.default_chain().unwrap();
-
-    let account_owner1 = client.get_owner().unwrap();
-    let account_owner2 = client.keygen().await?;
-
-
-    let (contract_path, service_path) = build_application(&client, "native-fungible").await?;
-
-
-    let params = Parameters::new("NAT");
-    let accounts = BTreeMap::from([
-        (account_owner1, Amount::from_tokens(1000)),
-    ]);
-    let state = InitialState { accounts };
-    let application_id = client
-        .publish_and_create::<NativeFungibleTokenAbi, Parameters, InitialState>(
-            contract_path,
-            service_path,
-            VmRuntime::Wasm,
-            &params,
-            &state,
-            &[],
-            None,
-        )
+    let app1 = node_service1.make_application(&chain1, &application_id)?;
+    app1.mutate("post(text: \"Linera Social is the new Mastodon!\")")
         .await?;
 
-    let port = get_node_port().await;
-    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-    let app_id = node_service.make_application(&chain_id, &application_id)?;
+    let query = "receivedPosts { keys { author, index } }";
+    let expected_response = serde_json::json!({
+        "receivedPosts": {
+            "keys": [
+                { "author": chain1, "index": 0 }
+            ]
+        }
+    });
+    notifications.wait_for_block(height2.try_add_one()?).await?;
+    assert_eq!(app2.query(query).await?, expected_response);
 
-    let amount_transfer = Amount::ONE;
-    let destination = Account {
-        chain_id,
-        owner: account_owner2,
-    };
-    let mutation = format!(
-        "transfer(owner: {}, amount: \"{}\", targetAccount: {})",
-        account_owner1.to_value(),
-        amount_transfer,
-        destination.to_value(),
-    );
-    let mutations = vec![mutation; num_operations];
-    let time_start = Instant::now();
-    app_id.multiple_mutate(&mutations).await?;
-    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for native-fungible transfer={average_time}");
+    let tip_after_first_post = node_service2.chain_tip(chain1).await?;
 
-    node_service.ensure_is_running()?;
-    net.ensure_is_running().await?;
-    net.terminate().await?;
-    println!("Successful end for repeated-native-fungible");
-    Ok(())
-}
-
-async fn end_to_end_repeated_native_transfer() -> Result<()> {
-    let num_operations = 500;
-    let config = get_config();
-
-    tracing::info!("Starting repeated transfer using node_service");
-    let (mut net, client) = config.instantiate().await?;
-
-    let chain_id = client.load_wallet()?.default_chain().unwrap();
-
-    let account_owner1 = client.get_owner().unwrap();
-    let account_owner2 = client.keygen().await?;
-
-
-    let port = get_node_port().await;
-    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-
-    node_service
+    // Perform an operation that does not emit events, or messages that client 2 listens to - to be
+    // safe, we just transfer from chain1 to itself.
+    node_service1
         .transfer(
-            chain_id,
+            chain1,
             AccountOwner::CHAIN,
-            Account { chain_id, owner: account_owner1 },
-            Amount::from_tokens(num_operations + 10),
+            Account::chain(chain1),
+            Amount::ONE,
         )
         .await?;
 
-    let recipient = Account {
-        chain_id,
-        owner: account_owner2,
-    };
-    let amount = Amount::ONE;
+    let (_, height2) = node_service2.chain_tip(chain2).await?.unwrap();
+    app1.mutate("post(text: \"Second post!\")").await?;
 
-    let mut query = String::from("mutation {\n");
-    let op = format!("transfer(chainId: \"{chain_id}\", owner: {}, recipient: {}, amount: \"{amount}\")",
-                     account_owner1.to_value(), recipient.to_value());
-    for index in 0..num_operations {
-        query = format!("{}  u{}: {}\n", query, index, op);
-    }
-    query.push_str("}\n");
+    let query = "receivedPosts { keys { author, index } }";
+    let expected_response = serde_json::json!({
+        "receivedPosts": {
+            "keys": [
+                { "author": chain1, "index": 1 },
+                { "author": chain1, "index": 0 }
+            ]
+        }
+    });
+    notifications.wait_for_block(height2.try_add_one()?).await?;
+    assert_eq!(app2.query(query).await?, expected_response);
 
-    let time_start = Instant::now();
-    let _data = node_service.query_node(&query).await?;
-    let average_time = (time_start.elapsed().as_millis() as f64) / (num_operations as f64);
-    println!("Average runtime for node-service transfer={average_time}");
+    let tip_after_second_post = node_service2.chain_tip(chain1).await?;
+    // The second post should not have moved the tip hash - client 2 should have only preprocessed
+    // that block, without downloading the transfer block in between.
+    assert_eq!(tip_after_first_post, tip_after_second_post);
 
-    node_service.ensure_is_running()?;
+    node_service1.ensure_is_running()?;
+    node_service2.ensure_is_running()?;
+
     net.ensure_is_running().await?;
     net.terminate().await?;
-    println!("Successful end for repeated-native-transfer");
-//    println!("data={data}");
+
     Ok(())
 }
-
-
-
 
 
 #[tokio::main]
@@ -292,21 +141,9 @@ async fn main() -> Result<()> {
     let test_name = &args[1];
 
     match test_name.as_str() {
-        "repeated-fungible" => {
-            println!("Running repeated-fungible test...");
-            end_to_end_repeated_transfer_fungible().await?;
-        }
-        "repeated-fungible-no-graphql" => {
-            println!("Running repeated-fungible-no-graphql test...");
-            end_to_end_repeated_transfer_fungible_no_graphql().await?;
-        }
-        "repeated-native-transfer" => {
-            println!("Running repeated-native-transfer test...");
-            end_to_end_repeated_native_transfer().await?;
-        }
-        "repeated-native-fungible" => {
-            println!("Running repeated-native-fungible test...");
-            end_to_end_repeated_transfer_native_fungible().await?;
+        "social" => {
+            println!("Running social test...");
+            test_wasm_end_to_end_social_event_streams().await?;
         }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);
