@@ -103,6 +103,7 @@ where
     S::Store: Clone + KeyValueStore,
 {
     let big_name = S::get_name();
+    println!("big_name={big_name}");
     let l_str = big_name
         .split(' ')
         .map(|x| x.to_string())

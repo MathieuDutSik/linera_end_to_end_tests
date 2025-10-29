@@ -80,6 +80,7 @@ pub struct SpecifiedLocalNetConfig {
     pub network: NetworkConfig,
     pub testing_prng_seed: Option<u64>,
     pub namespace: String,
+    pub directory: String,
     pub num_other_initial_chains: u32,
     pub initial_amount: Amount,
     pub num_initial_validators: usize,
@@ -211,7 +212,7 @@ impl Validator {
 }
 
 impl SpecifiedLocalNetConfig {
-    pub fn new_test(database: Database, network: Network) -> Self {
+    pub fn new_test(database: Database, network: Network, directory: String) -> Self {
         let num_shards = 4;
         let num_proxies = 1;
         let storage_config_builder = InnerStorageConfigBuilder::TestConfig;
@@ -223,6 +224,7 @@ impl SpecifiedLocalNetConfig {
         Self {
             database,
             network,
+            directory,
             num_other_initial_chains: 2,
             initial_amount: Amount::from_tokens(1_000_000),
             policy_config: ResourceControlPolicyConfig::Testnet,
@@ -348,7 +350,8 @@ impl SpecifiedLocalNet {
     }
 
     async fn command_for_binary(&self, name: &'static str) -> Result<Command> {
-        let path = resolve_binary(name, env!("CARGO_PKG_NAME")).await?;
+        let path = Path::new(&self.directory);
+        path.join(name);
         let mut command = Command::new(path);
         command.current_dir(self.path_provider.path());
         Ok(command)
