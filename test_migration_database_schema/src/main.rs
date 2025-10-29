@@ -63,10 +63,11 @@ struct AccessPoints {
 }
 
 impl AccessPoints {
-    async fn check_posts(&self, context: &str) -> anyhow::Result<()> {
-        println!("check_posts at context={context}");
+    async fn check_posts(&self, context1: &str, context2: &str) -> anyhow::Result<()> {
+        println!("check_posts at context1={context1} context2={context2}, step 1");
         let query = "receivedPosts { keys { author, index } }";
         let value: Value = self.app2.query(query).await?;
+        println!("check_posts at context1={context1} context2={context2}, step 2");
         println!("value={value}");
         let obj = value.as_object().unwrap();
         let mut indices = BTreeSet::new();
@@ -79,7 +80,9 @@ impl AccessPoints {
         //
         let query = "ownPosts(entries { })";
         let mut received_posts: Vec<String> = Vec::new();
+        println!("check_posts at context1={context1} context2={context2}, step 3");
         let value: Value = self.app2.query(query).await?;
+        println!("check_posts at context1={context1} context2={context2}, step 4");
         let obj = value.as_object().unwrap();
         for (_, v) in obj {
             let obj = v.as_object().unwrap();
@@ -97,23 +100,31 @@ impl AccessPoints {
             indices.len(),
             "The indices and received_posts length are not matching"
         );
+        println!("check_posts at context1={context1} context2={context2}, step 5");
         Ok(())
     }
 
     async fn social_make_posts(
         &mut self,
         notifications2: &mut Pin<Box<impl Stream<Item = Result<Notification>>>>,
+        context1: &str,
     ) -> anyhow::Result<()> {
-        self.check_posts("social_make_posts, beginning").await?;
+        println!("social_make_posts, context1={context1}, step 1");
+        self.check_posts(context1, "social_make_posts, beginning").await?;
+        println!("social_make_posts, context1={context1}, step 2");
         let post = random_post();
         self.received_posts.push(post.clone());
         self.app1.mutate(format!("post(text: \"{post}\")")).await?;
+        println!("social_make_posts, context1={context1}, step 3");
         let (_, height2) = self.node_service2.chain_tip(self.chain2).await?.unwrap();
+        println!("social_make_posts, context1={context1}, step 4");
 
         notifications2
             .wait_for_block(height2.try_add_one()?)
             .await?;
-        self.check_posts("social_make_posts, end").await?;
+        println!("social_make_posts, context1={context1}, step 5");
+        self.check_posts(context1, "social_make_posts, end").await?;
+        println!("social_make_posts, context1={context1}, step 6");
         Ok(())
     }
 }
@@ -188,7 +199,7 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
         app2,
         received_posts: Vec::new(),
     };
-    access_points.social_make_posts(&mut notifications2).await?;
+    access_points.social_make_posts(&mut notifications2, "First post").await?;
 
     // Killing two validators. Restarting them with the moved code.
     net.stop_validator(2).await?;
@@ -200,7 +211,7 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     net.restart_validator(3).await?;
 
     // Making the social posts. And checking
-    access_points.social_make_posts(&mut notifications2).await?;
+    access_points.social_make_posts(&mut notifications2, "Second post").await?;
 
     // Killing the two remaining old validators. Restarting them with the moved code.
     net.stop_validator(0).await?;
@@ -210,7 +221,7 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     net.restart_validator(1).await?;
 
     // Making the social posts. And checking
-    access_points.social_make_posts(&mut notifications2).await?;
+    access_points.social_make_posts(&mut notifications2, "Third post").await?;
 
     // Winding down.
     access_points.node_service1.ensure_is_running()?;
