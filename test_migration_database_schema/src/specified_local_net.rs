@@ -1,22 +1,14 @@
 // Copyright (c) Zefchain Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{
-    collections::BTreeMap,
-    env,
-    num::NonZeroU16,
-    time::Duration,
-};
+use std::{collections::BTreeMap, env, path::Path, time::Duration};
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use async_trait::async_trait;
-use linera_base::{
-    command::{resolve_binary, CommandExt},
-    data_types::Amount,
-};
+use linera_base::{command::CommandExt, data_types::Amount};
 use linera_client::client_options::ResourceControlPolicyConfig;
 use linera_core::node::ValidatorNodeProvider;
-use linera_rpc::config::{CrossChainConfig, ExporterServiceConfig, TlsConfig};
+use linera_rpc::config::{CrossChainConfig, TlsConfig};
 use linera_storage_service::common::storage_service_test_endpoint;
 use linera_views::{scylla_db::ScyllaDbDatabase, store::TestKeyValueDatabase as _};
 use tokio::process::{Child, Command};
@@ -28,10 +20,10 @@ use tracing::{error, info, warn};
 
 use linera_service::{
     cli_wrappers::{
-        ClientWrapper, LineraNet, LineraNetConfig, Network, NetworkConfig, OnClientDrop,
-        local_net::PathProvider,
+        local_net::PathProvider, ClientWrapper, LineraNet, LineraNetConfig, Network, NetworkConfig,
+        OnClientDrop,
     },
-    config::{BlockExporterConfig, Destination, DestinationConfig},
+    config::{Destination, DestinationConfig},
     storage::{InnerStorageConfig, StorageConfig},
     util::ChildExt,
 };
@@ -40,7 +32,6 @@ use linera_service::{
 const MAX_NUMBER_SHARDS: usize = 1000;
 
 pub const FIRST_PUBLIC_PORT: usize = 13000;
-
 
 async fn make_testing_config(database: Database) -> Result<InnerStorageConfig> {
     match database {
@@ -60,16 +51,12 @@ async fn make_testing_config(database: Database) -> Result<InnerStorageConfig> {
 
 pub enum InnerStorageConfigBuilder {
     TestConfig,
-    ExistingConfig {
-        storage_config: InnerStorageConfig,
-    },
 }
 
 impl InnerStorageConfigBuilder {
     pub async fn build(self, database: Database) -> Result<InnerStorageConfig> {
         match self {
             InnerStorageConfigBuilder::TestConfig => make_testing_config(database).await,
-            InnerStorageConfigBuilder::ExistingConfig { storage_config } => Ok(storage_config),
         }
     }
 }
@@ -78,9 +65,9 @@ impl InnerStorageConfigBuilder {
 pub struct SpecifiedLocalNetConfig {
     pub database: Database,
     pub network: NetworkConfig,
+    pub directory: String,
     pub testing_prng_seed: Option<u64>,
     pub namespace: String,
-    pub directory: String,
     pub num_other_initial_chains: u32,
     pub initial_amount: Amount,
     pub num_initial_validators: usize,
@@ -90,37 +77,12 @@ pub struct SpecifiedLocalNetConfig {
     pub cross_chain_config: CrossChainConfig,
     pub storage_config_builder: InnerStorageConfigBuilder,
     pub path_provider: PathProvider,
-    pub block_exporters: ExportersSetup,
-}
-
-/// The setup for the block exporters.
-#[derive(Clone, PartialEq)]
-pub enum ExportersSetup {
-    // Block exporters are meant to be started and managed by the testing framework.
-    Local(Vec<BlockExporterConfig>),
-    // Block exporters are already started and we just need to connect to them.
-    Remote(Vec<ExporterServiceConfig>),
-}
-
-impl ExportersSetup {
-    pub fn new(
-        with_block_exporter: bool,
-        block_exporter_address: String,
-        block_exporter_port: NonZeroU16,
-    ) -> ExportersSetup {
-        if with_block_exporter {
-            let exporter_config =
-                ExporterServiceConfig::new(block_exporter_address, block_exporter_port.into());
-            ExportersSetup::Remote(vec![exporter_config])
-        } else {
-            ExportersSetup::Local(vec![])
-        }
-    }
 }
 
 /// A set of Linera validators running locally as native processes.
 pub struct SpecifiedLocalNet {
     network: NetworkConfig,
+    pub directory: String,
     testing_prng_seed: Option<u64>,
     next_client_id: usize,
     num_initial_validators: usize,
@@ -133,7 +95,6 @@ pub struct SpecifiedLocalNet {
     common_storage_config: InnerStorageConfig,
     cross_chain_config: CrossChainConfig,
     path_provider: PathProvider,
-    block_exporters: ExportersSetup,
 }
 
 /// The name of the environment variable that allows specifying additional arguments to be passed
@@ -151,7 +112,6 @@ pub enum Database {
 struct Validator {
     proxies: Vec<Child>,
     servers: Vec<Child>,
-    exporters: Vec<Child>,
 }
 
 impl Validator {
@@ -159,7 +119,6 @@ impl Validator {
         Self {
             proxies: vec![],
             servers: vec![],
-            exporters: vec![],
         }
     }
 
@@ -193,19 +152,12 @@ impl Validator {
         Ok(())
     }
 
-    fn add_block_exporter(&mut self, exporter: Child) {
-        self.exporters.push(exporter);
-    }
-
     fn ensure_is_running(&mut self) -> Result<()> {
         for proxy in &mut self.proxies {
             proxy.ensure_is_running()?;
         }
         for child in &mut self.servers {
             child.ensure_is_running()?;
-        }
-        for exporter in &mut self.exporters {
-            exporter.ensure_is_running()?;
         }
         Ok(())
     }
@@ -236,7 +188,6 @@ impl SpecifiedLocalNetConfig {
             num_proxies,
             storage_config_builder,
             path_provider,
-            block_exporters: ExportersSetup::Local(vec![]),
         }
     }
 }
@@ -249,6 +200,7 @@ impl LineraNetConfig for SpecifiedLocalNetConfig {
         let storage_config = self.storage_config_builder.build(self.database).await?;
         let mut net = SpecifiedLocalNet::new(
             self.network,
+            self.directory,
             self.testing_prng_seed,
             self.namespace,
             self.num_initial_validators,
@@ -257,7 +209,6 @@ impl LineraNetConfig for SpecifiedLocalNetConfig {
             storage_config,
             self.cross_chain_config,
             self.path_provider,
-            self.block_exporters,
         );
         let client = net.make_client().await;
         ensure!(
@@ -321,6 +272,7 @@ impl SpecifiedLocalNet {
     #[expect(clippy::too_many_arguments)]
     fn new(
         network: NetworkConfig,
+        directory: String,
         testing_prng_seed: Option<u64>,
         common_namespace: String,
         num_initial_validators: usize,
@@ -329,10 +281,10 @@ impl SpecifiedLocalNet {
         common_storage_config: InnerStorageConfig,
         cross_chain_config: CrossChainConfig,
         path_provider: PathProvider,
-        block_exporters: ExportersSetup,
     ) -> Self {
         Self {
             network,
+            directory,
             testing_prng_seed,
             next_client_id: 0,
             num_initial_validators,
@@ -345,13 +297,11 @@ impl SpecifiedLocalNet {
             common_storage_config,
             cross_chain_config,
             path_provider,
-            block_exporters,
         }
     }
 
     async fn command_for_binary(&self, name: &'static str) -> Result<Command> {
-        let path = Path::new(&self.directory);
-        path.join(name);
+        let path = Path::new(&self.directory).join(name);
         let mut command = Command::new(path);
         command.current_dir(self.path_provider.path());
         Ok(command)
@@ -454,52 +404,6 @@ impl SpecifiedLocalNet {
                 metrics_port = {shard_metrics_port}
                 "#
             ));
-        }
-
-        match self.block_exporters {
-            ExportersSetup::Local(ref exporters) => {
-                for (j, exporter) in exporters.iter().enumerate() {
-                    let host = Network::Grpc.localhost();
-                    let port = self.block_exporter_port(n, j);
-                    let config_content = format!(
-                        r#"
-
-                        [[block_exporters]]
-                        host = "{host}"
-                        port = {port}
-                        "#
-                    );
-
-                    content.push_str(&config_content);
-                    let exporter_config = self.generate_block_exporter_config(
-                        n,
-                        j as u32,
-                        &exporter.destination_config,
-                    );
-                    let config_path = self
-                        .path_provider
-                        .path()
-                        .join(format!("exporter_config_{n}:{j}.toml"));
-
-                    fs_err::write(&config_path, &exporter_config)?;
-                }
-            }
-            ExportersSetup::Remote(ref exporters) => {
-                for exporter in exporters {
-                    let host = exporter.host.clone();
-                    let port = exporter.port;
-                    let config_content = format!(
-                        r#"
-
-                        [[block_exporters]]
-                        host = "{host}"
-                        port = {port}
-                        "#
-                    );
-
-                    content.push_str(&config_content);
-                }
-            }
         }
 
         fs_err::write(&path, content)?;
@@ -854,12 +758,6 @@ impl SpecifiedLocalNet {
         for shard in 0..self.num_shards {
             let server = self.run_server(index, shard).await?;
             validator.add_server(server);
-        }
-        if let ExportersSetup::Local(ref exporters) = self.block_exporters {
-            for block_exporter in 0..exporters.len() {
-                let exporter = self.run_exporter(index, block_exporter as u32).await?;
-                validator.add_block_exporter(exporter);
-            }
         }
 
         self.running_validators.insert(index, validator);

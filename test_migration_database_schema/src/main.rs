@@ -2,58 +2,47 @@ mod specified_local_net;
 use specified_local_net::{Database, SpecifiedLocalNetConfig};
 
 use anyhow::Result;
-use linera_base::{
-    data_types::Amount,
-    identifiers::{Account, AccountOwner},
-    vm::VmRuntime,
-};
-
+use futures::Stream;
+use linera_base::{data_types::Amount, identifiers::ChainId, vm::VmRuntime};
+use linera_core::worker::Notification;
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, ProcessInbox},
-    LineraNet, LineraNetConfig, Network,
+    ApplicationWrapper, ClientWrapper, LineraNet, LineraNetConfig, Network, NodeService,
+    NotificationsExt,
 };
-use linera_service::cli_wrappers::{ClientWrapper, NotificationsExt};
-use std::path::PathBuf;
-use std::env;
+use linera_views::random::generate_random_alphanumeric_string;
+use serde_json::Value;
+use social::SocialAbi;
+
+use std::{collections::BTreeSet, env, path::PathBuf, pin::Pin};
+
+fn get_directory(suffix: &str) -> String {
+    let directory = std::env::current_dir().expect("directory").join(suffix);
+    format!("{}", directory.display())
+}
 
 fn get_directory_old_schema() -> String {
-    let directory = std::env::current_dir();
-    directory.extend("linera-protocol_test_conway_old_schema/target/debug");
+    get_directory("linera-protocol_test_conway_old_schema/target/debug")
 }
 
 fn get_directory_new_schema() -> String {
-    let directory = std::env::current_dir();
-    directory.extend("linera-protocol_test_conway_new_schema/target/debug");
+    get_directory("linera-protocol_test_conway_new_schema/target/debug")
 }
 
 fn get_config() -> SpecifiedLocalNetConfig {
     let directory = get_directory_old_schema();
-    let mut config = SpecifiedLocalNetConfig::new_test(Database::ScyllaDb, Network::Grpc, directory);
+    let mut config =
+        SpecifiedLocalNetConfig::new_test(Database::ScyllaDb, Network::Grpc, directory);
     config.num_initial_validators = 4;
     config.num_shards = 1;
     config
 }
 
 async fn build_application(client: &ClientWrapper, name: &str) -> Result<(PathBuf, PathBuf)> {
-    let path = env::current_dir()?.join("./smart_contract_code/").join(name);
+    let path = env::current_dir()?
+        .join("./smart_contract_code/")
+        .join(name);
     Ok(client.build_application(&path, name, true).await?)
-}
-
-
-
-fn value_to_btreemap(value: &Value) -> Option<BTreeMap<String, String>> {
-    // Ensure it's a JSON object
-    let obj = value.as_object()?;
-    let mut map = BTreeMap::new();
-    for (k, v) in obj {
-        // Convert each value to a string representation
-        let s = match v {
-            Value::String(s) => s.clone(),
-            _ => return None;
-        };
-        map.insert(k.clone(), s);
-    }
-    Some(map)
 }
 
 fn random_post() -> String {
@@ -63,7 +52,6 @@ fn random_post() -> String {
     post
 }
 
-
 struct AccessPoints {
     pub chain1: ChainId,
     pub chain2: ChainId,
@@ -71,55 +59,64 @@ struct AccessPoints {
     pub node_service2: NodeService,
     pub app1: ApplicationWrapper<SocialAbi>,
     pub app2: ApplicationWrapper<SocialAbi>,
-    pub notification2: Pin<Box<impl Stream<Item = Result<Notification>>>>,
     pub received_posts: Vec<String>,
 }
 
 impl AccessPoints {
-    async fn check_posts(&self, context: String) -> anyhow::Result<()> {
+    async fn check_posts(&self, context: &str) -> anyhow::Result<()> {
+        println!("check_posts at context={context}");
         let query = "receivedPosts { keys { author, index } }";
-        let value = self.app2.query(query).await?;
+        let value: Value = self.app2.query(query).await?;
         println!("value={value}");
-        let obj = value.as_object()?;
+        let obj = value.as_object().unwrap();
         let mut indices = BTreeSet::new();
         for (_, v) in obj {
-            let s = match v {
-                Value::Number(s) => indices.insert(s);
-                _ => panic!("Should be a number");
-            };
+            let v = v.as_number().unwrap();
+            let v = v.as_u64().unwrap();
+            let v = v as usize;
+            indices.insert(v);
         }
         //
         let query = "ownPosts(entries { })";
-        let mut received_posts = Vec::new();
-        let value = self.app2.query(query).await?;
-        let obj = value.as_object()?;
+        let mut received_posts: Vec<String> = Vec::new();
+        let value: Value = self.app2.query(query).await?;
+        let obj = value.as_object().unwrap();
         for (_, v) in obj {
-            let obj = v.as_object()?;
-            let message = obj["text"].as_string();
+            let obj = v.as_object().unwrap();
+            let obj = obj.get("text").unwrap();
+            let obj = obj.as_str().unwrap();
+            let message = obj.to_string();
             received_posts.push(message);
         }
-        assert_eq!(received_posts, self.received_posts, "The received posts should match");
-        assert_eq!(received_posts.len(), indices.len(), "The indices and received_posts length are not matching");
+        assert_eq!(
+            received_posts, self.received_posts,
+            "The received posts should match"
+        );
+        assert_eq!(
+            received_posts.len(),
+            indices.len(),
+            "The indices and received_posts length are not matching"
+        );
         Ok(())
     }
 
-    async fn social_make_posts(&mut self) -> anyhow::Result<()> {
-        self.check_posts("social_make_posts, beginning");
+    async fn social_make_posts(
+        &mut self,
+        notifications2: &mut Pin<Box<impl Stream<Item = Result<Notification>>>>,
+    ) -> anyhow::Result<()> {
+        self.check_posts("social_make_posts, beginning").await?;
         let post = random_post();
         self.received_posts.push(post.clone());
-        self.app1.mutate(format!("post(text: \"{post}\")"))
-            .await?;
-        let (_, height2) = self.node_service2.chain_tip(chain2).await?.unwrap();
+        self.app1.mutate(format!("post(text: \"{post}\")")).await?;
+        let (_, height2) = self.node_service2.chain_tip(self.chain2).await?.unwrap();
 
-        let author = format!("{chain1}");
-        let query = "receivedPosts { keys { author, index } }";
-        self.notifications2.wait_for_block(height2.try_add_one()?).await?;
-        self.check_posts("social_make_posts, end");
+        notifications2
+            .wait_for_block(height2.try_add_one()?)
+            .await?;
+        self.check_posts("social_make_posts, end").await?;
         Ok(())
     }
 }
-
-
 
 /*
 The test is adapted from the social test in linera-protocol.
@@ -167,64 +164,53 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
 
     let port1 = get_node_port().await;
     let port2 = get_node_port().await;
-    let mut node_service1 = client1
+    let node_service1 = client1
         .run_node_service(port1, ProcessInbox::Automatic)
         .await?;
-    let mut node_service2 = client2
+    let node_service2 = client2
         .run_node_service(port2, ProcessInbox::Automatic)
         .await?;
 
     let app2 = node_service2.make_application(&chain2, &application_id)?;
     app2.mutate(format!("subscribe(chainId: \"{chain1}\")"))
         .await?;
-    let (_, height2) = node_service2.chain_tip(chain2).await?.unwrap();
-
     let mut notifications2 = node_service2.notifications(chain2).await?;
 
     let app1 = node_service1.make_application(&chain1, &application_id)?;
 
     //
-    let access_points = AccessPoints {
+    let mut access_points = AccessPoints {
         chain1,
         chain2,
         node_service1,
         node_service2,
         app1,
         app2,
-        notifications2,
         received_posts: Vec::new(),
     };
-    access_points.social_make_posts().await?;
+    access_points.social_make_posts(&mut notifications2).await?;
 
     // Killing two validators. Restarting them with the moved code.
-    net.terminate_server(2, 0).await?;
-    net.terminate_server(3, 0).await?;
-    net.terminate_proxy(2, 0).await?;
-    net.terminate_proxy(3, 0).await?;
+    net.stop_validator(2).await?;
+    net.stop_validator(3).await?;
 
     net.directory = get_directory_new_schema();
 
-    net.start_server(2, 0).await?;
-    net.start_server(3, 0).await?;
-    net.start_proxy(2, 0).await?;
-    net.start_proxy(3, 0).await?;
+    net.restart_validator(2).await?;
+    net.restart_validator(3).await?;
 
     // Making the social posts. And checking
-    access_points.social_make_posts().await?;
+    access_points.social_make_posts(&mut notifications2).await?;
 
     // Killing the two remaining old validators. Restarting them with the moved code.
-    net.terminate_server(0, 0).await?;
-    net.terminate_server(1, 0).await?;
-    net.terminate_proxy(0, 0).await?;
-    net.terminate_proxy(1, 0).await?;
+    net.stop_validator(0).await?;
+    net.stop_validator(1).await?;
 
-    net.start_server(0, 0).await?;
-    net.start_server(1, 0).await?;
-    net.start_proxy(0, 0).await?;
-    net.start_proxy(1, 0).await?;
+    net.restart_validator(0).await?;
+    net.restart_validator(1).await?;
 
     // Making the social posts. And checking
-    access_points.social_make_posts().await?;
+    access_points.social_make_posts(&mut notifications2).await?;
 
     // Winding down.
     access_points.node_service1.ensure_is_running()?;
@@ -235,12 +221,6 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-
-
-
-
-
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -267,4 +247,4 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
- }
+}
