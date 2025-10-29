@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use linera_base::{command::CommandExt, data_types::Amount};
 use linera_client::client_options::ResourceControlPolicyConfig;
 use linera_core::node::ValidatorNodeProvider;
-use linera_rpc::config::{CrossChainConfig, TlsConfig};
+use linera_rpc::config::CrossChainConfig;
 use linera_storage_service::common::storage_service_test_endpoint;
 use linera_views::{scylla_db::ScyllaDbDatabase, store::TestKeyValueDatabase as _};
 use tokio::process::{Child, Command};
@@ -23,7 +23,6 @@ use linera_service::{
         local_net::PathProvider, ClientWrapper, LineraNet, LineraNetConfig, Network, NetworkConfig,
         OnClientDrop,
     },
-    config::{Destination, DestinationConfig},
     storage::{InnerStorageConfig, StorageConfig},
     util::ChildExt,
 };
@@ -301,9 +300,13 @@ impl SpecifiedLocalNet {
     }
 
     async fn command_for_binary(&self, name: &'static str) -> Result<Command> {
+        println!("command_for_binary, directory={}", self.directory);
         let path = Path::new(&self.directory).join(name);
+        println!("command_for_binary, step 1");
         let mut command = Command::new(path);
+        println!("command_for_binary, step 2");
         command.current_dir(self.path_provider.path());
+        println!("command_for_binary, step 3");
         Ok(command)
     }
 
@@ -413,93 +416,6 @@ impl SpecifiedLocalNet {
                 error.to_string_lossy()
             )
         })
-    }
-
-    fn generate_block_exporter_config(
-        &self,
-        validator: usize,
-        exporter_id: u32,
-        destination_config: &DestinationConfig,
-    ) -> String {
-        let n = validator;
-        let host = Network::Grpc.localhost();
-        let port = self.block_exporter_port(n, exporter_id as usize);
-        let metrics_port = Self::block_exporter_metrics_port(exporter_id as usize);
-        let mut config = format!(
-            r#"
-            id = {exporter_id}
-
-            metrics_port = {metrics_port}
-
-            [service_config]
-            host = "{host}"
-            port = {port}
-
-            "#
-        );
-
-        let DestinationConfig {
-            destinations,
-            committee_destination,
-        } = destination_config;
-
-        if *committee_destination {
-            let destination_string_to_push = r#"
-
-            [destination_config]
-            committee_destination = true
-            "#
-            .to_string();
-
-            config.push_str(&destination_string_to_push);
-        }
-
-        for destination in destinations {
-            let destination_string_to_push = match destination {
-                Destination::Indexer {
-                    tls,
-                    endpoint,
-                    port,
-                } => {
-                    let tls = match tls {
-                        TlsConfig::ClearText => "ClearText",
-                        TlsConfig::Tls => "Tls",
-                    };
-                    format!(
-                        r#"
-                        [[destination_config.destinations]]
-                        tls = "{tls}"
-                        endpoint = "{endpoint}"
-                        port = {port}
-                        kind = "Indexer"
-                        "#
-                    )
-                }
-                Destination::Validator { endpoint, port } => {
-                    format!(
-                        r#"
-                        [[destination_config.destinations]]
-                        endpoint = "{endpoint}"
-                        port = {port}
-                        kind = "Validator"
-                        "#
-                    )
-                }
-                Destination::Logging { file_name } => {
-                    format!(
-                        r#"
-                        [[destination_config.destinations]]
-                        file_name = "{file_name}"
-                        kind = "Logging"
-                        "#
-                    )
-                }
-            };
-
-            config.push_str(&destination_string_to_push);
-        }
-
-        config
     }
 
     async fn generate_initial_validator_config(&mut self) -> Result<()> {

@@ -21,7 +21,7 @@ else
 fi
 cd linera-protocol_test_conway_new_schema && git checkout introduce_new_schema_and_migration_tool && cargo build --features scylladb && cd ..
 
-echo "Running the fungible tests"
+echo "Running the social test"
 cargo run social > output_social
 cat output_social
 

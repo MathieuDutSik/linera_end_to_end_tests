@@ -1,5 +1,5 @@
 [package]
-name = "benchmark_repeated_fungibles"
+name = "test_migration_zero_to_one"
 version = "0.1.0"
 edition = "2021"
 

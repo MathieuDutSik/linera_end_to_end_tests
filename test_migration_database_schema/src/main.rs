@@ -1,12 +1,12 @@
 mod specified_local_net;
-use specified_local_net::{Database, SpecifiedLocalNetConfig};
+use specified_local_net::SpecifiedLocalNetConfig;
 
 use anyhow::Result;
 use futures::Stream;
 use linera_base::{data_types::Amount, identifiers::ChainId, vm::VmRuntime};
 use linera_core::worker::Notification;
 use linera_service::cli_wrappers::{
-    local_net::{get_node_port, ProcessInbox},
+    local_net::{get_node_port, LocalNetConfig, ProcessInbox},
     ApplicationWrapper, ClientWrapper, LineraNet, LineraNetConfig, Network, NodeService,
     NotificationsExt,
 };
@@ -16,23 +16,66 @@ use social::SocialAbi;
 
 use std::{collections::BTreeSet, env, path::PathBuf, pin::Pin};
 
+enum ChoiceVersion {
+    V0,
+    V1,
+}
+
+impl ChoiceVersion {
+    fn get_dir(&self) -> String {
+        match self {
+            ChoiceVersion::V0 => format!("linera-protocol_test_conway_old_schema"),
+            ChoiceVersion::V1 => format!("linera-protocol_test_conway_new_schema"),
+        }
+    }
+
+    fn to_string(&self) -> String {
+        format!("{}/target/debug", self.get_dir())
+    }
+
+    fn set_links(&self) {
+        use std::os::unix::fs::symlink;
+        let directory = self.to_string();
+        for binary in ["linera", "linera-proxy", "linera-server"] {
+            let target = env::current_dir().expect("pwd")
+                .join(&directory)
+                .join(binary);
+            let link = env::current_dir().expect("pwd")
+                .join("target/debug")
+                .join(binary);
+            if link.symlink_metadata().is_ok() {
+                std::fs::remove_file(&link).unwrap();
+            }
+            symlink(target, link).expect("failed link creation");
+        }
+    }
+}
+
 fn get_directory(suffix: &str) -> String {
     let directory = std::env::current_dir().expect("directory").join(suffix);
     format!("{}", directory.display())
 }
 
 fn get_directory_old_schema() -> String {
-    get_directory("linera-protocol_test_conway_old_schema/target/debug")
+    get_directory(&ChoiceVersion::V0.to_string())
 }
 
 fn get_directory_new_schema() -> String {
-    get_directory("linera-protocol_test_conway_new_schema/target/debug")
+    get_directory(&ChoiceVersion::V1.to_string())
 }
 
-fn get_config() -> SpecifiedLocalNetConfig {
+fn get_config_specified() -> SpecifiedLocalNetConfig {
     let directory = get_directory_old_schema();
+    println!("get_config, directory={directory}");
     let mut config =
-        SpecifiedLocalNetConfig::new_test(Database::ScyllaDb, Network::Grpc, directory);
+        SpecifiedLocalNetConfig::new_test(specified_local_net::Database::ScyllaDb, Network::Grpc, directory);
+    config.num_initial_validators = 4;
+    config.num_shards = 1;
+    config
+}
+
+fn get_config() -> LocalNetConfig {
+    let mut config = LocalNetConfig::new_test(linera_service::cli_wrappers::local_net::Database::ScyllaDb, Network::Grpc);
     config.num_initial_validators = 4;
     config.num_shards = 1;
     config
@@ -136,6 +179,7 @@ But also of the reconfiguration test.
 async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     use social::SocialAbi;
 
+    ChoiceVersion::V0.set_links();
     let config = get_config();
     let (mut net, client1) = config.instantiate().await?;
 
@@ -205,7 +249,7 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     net.stop_validator(2).await?;
     net.stop_validator(3).await?;
 
-    net.directory = get_directory_new_schema();
+    ChoiceVersion::V1.set_links();
 
     net.restart_validator(2).await?;
     net.restart_validator(3).await?;
@@ -235,16 +279,19 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    println!("main, step 1");
     let args: Vec<String> = env::args().collect();
+    println!("main, step 2");
 
     if args.len() < 2 {
         eprintln!("Error: No test specified");
         eprintln!("Usage: {} <test-name>", args[0]);
-        eprintln!("Available tests: repeated-fungible, repeated-fungible-no-graphql, all");
         std::process::exit(1);
     }
+    println!("main, step 3");
 
     let test_name = &args[1];
+    println!("test_name={test_name}");
 
     match test_name.as_str() {
         "social" => {
