@@ -107,6 +107,24 @@ pub enum Database {
     ScyllaDb,
 }
 
+fn make_file_available(file_name: &str) -> anyhow::Result<()> {
+    let mut iter = 0;
+    loop {
+        let first_free_file_attempt = if iter == 0 {
+            file_name.to_string()
+        } else {
+            format!("{}_V{}", file_name, iter)
+        };
+        if !Path::new(&first_free_file_attempt).exists() {
+            if file_name != first_free_file_attempt {
+                std::fs::rename(file_name, &first_free_file_attempt)?;
+            }
+            return Ok(());
+        }
+        iter += 1;
+    }
+}
+
 /// The processes of a running validator.
 struct Validator {
     proxies: Vec<Child>,
@@ -302,11 +320,8 @@ impl SpecifiedLocalNet {
     async fn command_for_binary(&self, name: &'static str) -> Result<Command> {
         println!("command_for_binary, directory={}", self.directory);
         let path = Path::new(&self.directory).join(name);
-        println!("command_for_binary, step 1");
         let mut command = Command::new(path);
-        println!("command_for_binary, step 2");
         command.current_dir(self.path_provider.path());
-        println!("command_for_binary, step 3");
         Ok(command)
     }
 
@@ -454,6 +469,7 @@ impl SpecifiedLocalNet {
             .get(&validator)
             .expect("initialized storage");
         let log_file = format!("LOG_proxy_{}_{}", validator, proxy_id);
+        make_file_available(&log_file)?;
         let log_file = File::create(log_file)?;
         let child = self
             .command_for_binary("linera-proxy")
@@ -629,6 +645,7 @@ impl SpecifiedLocalNet {
             command.args(var.split_whitespace());
         }
         let log_file = format!("LOG_server_{}_{}", validator, shard);
+        make_file_available(&log_file)?;
         let log_file = File::create(log_file)?;
         command
             .arg("run")

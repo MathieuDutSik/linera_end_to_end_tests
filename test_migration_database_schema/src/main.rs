@@ -328,7 +328,6 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     // Making the social posts. And checking
     access_points.social_make_posts(&mut notifications2, "Second post").await?;
     println!("test_wasm_end_to_end_social_event_streams, step 13");
-    /*
 
     // Killing the two remaining old validators. Restarting them with the moved code.
     net.stop_validator(0).await?;
@@ -340,7 +339,6 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     // Making the social posts. And checking
     access_points.social_make_posts(&mut notifications2, "Third post").await?;
 
-    */
     // Winding down.
     access_points.node_service1.ensure_is_running()?;
     access_points.node_service2.ensure_is_running()?;
