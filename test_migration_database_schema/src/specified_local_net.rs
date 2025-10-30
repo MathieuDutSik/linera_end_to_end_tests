@@ -448,16 +448,20 @@ impl SpecifiedLocalNet {
     }
 
     async fn run_proxy(&mut self, validator: usize, proxy_id: usize) -> Result<Child> {
+        use std::fs::File;
         let storage = self
             .initialized_validator_storages
             .get(&validator)
             .expect("initialized storage");
+        let log_file = format!("LOG_proxy_{}_{}", validator, proxy_id);
+        let log_file = File::create(log_file)?;
         let child = self
             .command_for_binary("linera-proxy")
             .await?
             .arg(format!("server_{}.json", validator))
             .args(["--storage", &storage.to_string()])
             .args(["--id", &proxy_id.to_string()])
+            .stderr::<File>(log_file)
             .spawn_into()?;
 
         let port = self.proxy_public_port(validator, proxy_id);
@@ -609,6 +613,7 @@ impl SpecifiedLocalNet {
     }
 
     async fn run_server(&mut self, validator: usize, shard: usize) -> Result<Child> {
+        use std::fs::File;
         let mut storage = self
             .initialized_validator_storages
             .get(&validator)
@@ -623,12 +628,15 @@ impl SpecifiedLocalNet {
         if let Ok(var) = env::var(SERVER_ENV) {
             command.args(var.split_whitespace());
         }
+        let log_file = format!("LOG_server_{}_{}", validator, shard);
+        let log_file = File::create(log_file)?;
         command
             .arg("run")
             .args(["--storage", &storage.to_string()])
             .args(["--server", &format!("server_{}.json", validator)])
             .args(["--shard", &shard.to_string()])
-            .args(self.cross_chain_config.to_args());
+            .args(self.cross_chain_config.to_args())
+            .stderr::<File>(log_file);
         let child = command.spawn_into()?;
 
         let port = self.shard_port(validator, shard);

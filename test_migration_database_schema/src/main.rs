@@ -73,7 +73,6 @@ fn get_directory_new_schema() -> String {
     get_directory(&ChoiceVersion::V1.to_string())
 }
 
-/*
 mod specified_local_net;
 fn get_config_specified() -> specified_local_net::SpecifiedLocalNetConfig {
     let directory = get_directory_old_schema();
@@ -84,7 +83,6 @@ fn get_config_specified() -> specified_local_net::SpecifiedLocalNetConfig {
     config.num_shards = 1;
     config
 }
-*/
 
 fn get_config() -> LocalNetConfig {
     let mut config = LocalNetConfig::new_test(linera_service::cli_wrappers::local_net::Database::ScyllaDb, Network::Grpc);
@@ -119,10 +117,10 @@ struct AccessPoints {
 
 impl AccessPoints {
     async fn get_posts(&self, context1: &str, context2: &str) -> anyhow::Result<Vec<usize>> {
-        println!("get_posts at context1={context1} context2={context2}, step 1");
+        println!("get_posts 1: context1={context1} context2={context2}");
         let query = "receivedPosts { keys { author, index } }";
         let value: Value = self.app2.query(query).await?;
-        println!("get_posts at context1={context1} context2={context2}, step 2");
+        println!("get_posts 2: context1={context1} context2={context2}");
         println!("1: value={value}");
         let map = value.as_object().unwrap();
         let obj = map.get("receivedPosts").unwrap();
@@ -147,7 +145,7 @@ impl AccessPoints {
 //        let query = format!("ownPosts {{ entries(start: 0, end: {}) }}", end);
         let query = format!("ownPosts {{ entries {{ key, value {{ text }} }} }}");
         let mut received_posts: Vec<String> = Vec::new();
-        println!("get_posts at context1={context1} context2={context2}, step 3");
+        println!("get_posts 3: context1={context1} context2={context2}");
         let value: Value = self.app2.query(query).await?;
         println!("value={value}");
         let map = value.as_object().unwrap();
@@ -164,19 +162,18 @@ impl AccessPoints {
             let message = obj.to_string();
             received_posts.push(message);
         }
-        println!("5: received_posts={received_posts:?}");
-        println!("get_posts at context1={context1} context2={context2}, step 5");
+        println!("get_posts 4: context1={context1} context2={context2} received_posts={received_posts:?}");
         let indices = indices.into_iter().collect::<Vec<usize>>();
         Ok(indices)
     }
 
     async fn wait_process_inbox(&mut self, context1: &str) -> anyhow::Result<()> {
         for i in 0..5 {
-            println!("wait_process_inbox, context1={context1}, i={i}, step 1");
+            println!("wait_process_inbox 1: context1={context1}, i={i}");
             linera_base::time::timer::sleep(linera_base::time::Duration::from_secs(i)).await;
-            println!("wait_process_inbox, context1={context1}, i={i}, step 2");
+            println!("wait_process_inbox 2: context1={context1}, i={i}");
             let messages = self.node_service2.process_inbox(&self.chain2).await?;
-            println!("wait_process_inbox, context1={context1}, i={i}, step 3");
+            println!("wait_process_inbox 3: context1={context1}, i={i}");
             if messages.is_empty() {
                 return Ok(())
             }
@@ -230,17 +227,15 @@ impl AccessPoints {
         notifications2: &mut Pin<Box<impl Stream<Item = Result<Notification>>>>,
         context1: &str,
     ) -> anyhow::Result<()> {
-        println!("social_make_posts, context1={context1}, step 1");
+        println!("social_make_posts 1: context1={context1}");
         self.check_posts(notifications2, context1).await?;
-        println!("social_make_posts, context1={context1}, step 2");
+        println!("social_make_posts 2: context1={context1}");
         let post = random_post();
         self.received_posts.push(post.clone());
         self.app1.mutate(format!("post(text: \"{post}\")")).await?;
-        println!("social_make_posts, context1={context1}, step 3");
-
-        println!("social_make_posts, context1={context1}, step 5");
+        println!("social_make_posts 3: context1={context1}");
         self.check_posts(notifications2, context1).await?;
-        println!("social_make_posts, context1={context1}, step 6");
+        println!("social_make_posts 4: context1={context1}");
         Ok(())
     }
 }
@@ -253,7 +248,7 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     use social::SocialAbi;
 
     ChoiceVersion::V0.set_links();
-    let config = get_config();
+    let config = get_config_specified();
     let (mut net, client1) = config.instantiate().await?;
 
     let faucet_client = net.make_client().await;
@@ -318,18 +313,22 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     };
     access_points.social_make_posts(&mut notifications2, "First post").await?;
 
-    /*
     // Killing two validators. Restarting them with the moved code.
     net.stop_validator(2).await?;
     net.stop_validator(3).await?;
 
     ChoiceVersion::V1.set_links();
 
+    println!("test_wasm_end_to_end_social_event_streams, step 10");
     net.restart_validator(2).await?;
+    println!("test_wasm_end_to_end_social_event_streams, step 11");
     net.restart_validator(3).await?;
+    println!("test_wasm_end_to_end_social_event_streams, step 12");
 
     // Making the social posts. And checking
     access_points.social_make_posts(&mut notifications2, "Second post").await?;
+    println!("test_wasm_end_to_end_social_event_streams, step 13");
+    /*
 
     // Killing the two remaining old validators. Restarting them with the moved code.
     net.stop_validator(0).await?;
