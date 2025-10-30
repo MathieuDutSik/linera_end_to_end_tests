@@ -21,7 +21,7 @@ getrandom = { version = "0.2.12", default-features = false, features = [
     "custom",
 ] }
 hex = "0.4.3"
-linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
+linera-sdk = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
 log = "0.4.20"
 num-bigint = "0.4.3"
 num-traits = "0.2.16"

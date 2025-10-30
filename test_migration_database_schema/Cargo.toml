@@ -17,14 +17,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
 # Linera dependencies from GitHub
-linera-base = { git = "https://github.com/linera-io/linera-protocol", features = ["test"] }
-linera-service = { git = "https://github.com/linera-io/linera-protocol", features = ["test", "scylladb", "wasmer"] }
-linera-client = { git = "https://github.com/linera-io/linera-protocol" }
-linera-core = { git = "https://github.com/linera-io/linera-protocol" }
-linera-sdk = { git = "https://github.com/linera-io/linera-protocol" }
-linera-rpc = { git = "https://github.com/linera-io/linera-protocol" }
-linera-views = { git = "https://github.com/linera-io/linera-protocol" }
-linera-storage-service = { git = "https://github.com/linera-io/linera-protocol" }
+linera-base = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway", features = ["test"] }
+linera-service = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway", features = ["test", "scylladb", "wasmer"] }
+linera-client = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
+linera-core = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
+linera-sdk = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
+linera-rpc = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
+linera-views = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
+linera-storage-service = { git = "https://github.com/linera-io/linera-protocol", branch = "testnet_conway" }
 
 # Example applications
 social = { path = "./smart_contract_code/social" }

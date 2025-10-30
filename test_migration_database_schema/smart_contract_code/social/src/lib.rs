@@ -117,3 +117,28 @@ impl CustomSerialize for Key {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use linera_sdk::{
+        linera_base_types::{ChainId, Timestamp},
+        views::CustomSerialize,
+    };
+
+    use super::Key;
+
+    #[test]
+    fn test_key_custom_serialize() {
+        let key = Key {
+            timestamp: Timestamp::from(0x123456789ABCDEF),
+            author: ChainId([0x12345, 0x6789A, 0xBCDEF, 0x0248A].into()),
+            index: 0x76543210,
+        };
+        let ser_key = key
+            .to_custom_bytes()
+            .expect("serialization of Key should succeed");
+        let deser_key =
+            Key::from_custom_bytes(&ser_key).expect("deserialization of Key should succeed");
+        assert_eq!(key, deser_key);
+    }
+}

@@ -116,8 +116,8 @@ impl SocialContract {
             text,
             image_url,
         };
-        let index = self.state.own_posts.count().try_into().unwrap();
-        self.state.own_posts.push(post.clone());
+        let index = self.state.own_posts.count().await.unwrap() as u32;
+        self.state.own_posts.insert(&index, post.clone()).unwrap();
         self.runtime
             .emit(STREAM_NAME.into(), &Event::Post { post, index });
     }
