@@ -43,7 +43,7 @@ impl Contract for StateTrivialityContract {
         // Validate that the application parameters were configured correctly.
         self.runtime.application_parameters();
 
-        self.state.value.set(None);
+        self.state.app_id.set(None);
     }
 
     async fn execute_operation(&mut self, operation: StateTrivialityOperation) {
@@ -66,7 +66,7 @@ impl Contract for StateTrivialityContract {
                         &initialization_value,
                         vec![],
                     );
-                self.state.value.set(Some(application_id));
+                self.state.app_id.set(Some(application_id));
 
                 let app_id_untyped = application_id.forget_abi();
                 let is_trivial = self.runtime.has_trivial_storage(app_id_untyped);
@@ -104,7 +104,7 @@ impl Contract for StateTrivialityContract {
                 // B: query
                 let val = self.runtime.query_service(application_id, &query_request);
                 if do_save {
-                    assert!(val == 0, "even after increment the service should return the basic state");
+                    assert!(val == increment_value, "We save, so the value should be the incremented one");
                 } else {
                     assert!(val == 0, "Not saved, therefore the service value is 0");
                 }
@@ -117,7 +117,7 @@ impl Contract for StateTrivialityContract {
                 }
             },
             StateTrivialityOperation::TestTrivialState(expected_value) => {
-                let app_id = *self.state.value.get();
+                let app_id = *self.state.app_id.get();
                 let app_id: ApplicationId = app_id.unwrap().forget_abi();
                 let is_trivial = self.runtime.has_trivial_storage(app_id);
                 assert_eq!(is_trivial, expected_value);

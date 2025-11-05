@@ -40,7 +40,7 @@ impl Service for StateTrivialityService {
     async fn handle_query(&self, request: StateTrivialityRequest) -> u64 {
         match request {
             StateTrivialityRequest::Query => {
-                let application_id = self.state.value.get().expect("An application_id");
+                let application_id = self.state.app_id.get().expect("An application_id");
                 let counter_request = CounterRequest::Query;
                 self.runtime
                     .query_application(application_id, &counter_request)

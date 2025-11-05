@@ -21,13 +21,18 @@ echo "Building WASM smart contract tester."
 cargo build
 
 
-git clone https://github.com/MathieuDutSik/linera-protocol_second
-cd linera-protocol_second && git checkout has_non_trivial_storage && cargo build && cd ..
+if [ ! -d "linera-protocol_second_branch_trivial_storage" ]; then
+    git clone https://github.com/MathieuDutSik/linera-protocol_second linera-protocol_second_branch_trivial_storage
+    cd linera-protocol_second_branch_trivial_storage && git checkout has_non_trivial_storage && cd ..
+else
+    echo "Directory already exists, skipping clone."
+fi
+cd linera-protocol_second_branch_trivial_storage && cargo build && cd ..
 
 
 
 echo "Linking linera binaries..."
-export LINERA_PATH=$PWD/linera-protocol_second
+export LINERA_PATH=$PWD/linera-protocol_second_branch_trivial_storage
 ln -sf $LINERA_PATH/target/debug/linera target/debug/linera
 ln -sf $LINERA_PATH/target/debug/linera-server target/debug/linera-server
 ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy

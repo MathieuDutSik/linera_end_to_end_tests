@@ -60,17 +60,19 @@ async fn main() -> Result<()> {
     // Step 4: Call a mutation that takes the Vec<u8> of "contract", "service",
     println!("Step 4: Calling CreateAndCall mutation with increment_value=5");
     let increment_value = 5;
-    let mutation_request = StateTrivialityRequest::CreateAndCall(
-        contract_bytes,
-        service_bytes,
-        increment_value,
-        true,
-    );
-    application.run_json_query(&mutation_request).await?;
+    for do_save in [true, false] {
+        let mutation_request = StateTrivialityRequest::CreateAndCall(
+            contract_bytes.clone(),
+            service_bytes.clone(),
+            increment_value,
+            do_save,
+        );
+        application.run_json_query(&mutation_request).await?;
 
-    // Step 5: Now reading again to see if things have changed.
-    let mutation_request = StateTrivialityRequest::TestTrivialState(false);
-    application.run_json_query(&mutation_request).await?;
+        // Step 5: Now reading again to see if things have changed.
+        let mutation_request = StateTrivialityRequest::TestTrivialState(!do_save);
+        application.run_json_query(&mutation_request).await?;
+    }
 
 
     node_service.ensure_is_running()?;

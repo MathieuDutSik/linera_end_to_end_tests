@@ -11,5 +11,5 @@ use linera_sdk::{
 #[derive(RootView)]
 #[view(context = ViewStorageContext)]
 pub struct StateTrivialityState {
-    pub value: RegisterView<Option<ApplicationId<CounterNoStateAbi>>>,
+    pub app_id: RegisterView<Option<ApplicationId<CounterNoStateAbi>>>,
 }
