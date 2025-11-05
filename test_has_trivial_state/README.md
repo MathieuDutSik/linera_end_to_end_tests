@@ -1,32 +1,13 @@
-# Linera WASM Smart Contracts Testing
+# Testing the `has_trivial_storage` functionality of Linera.
 
-This project contains end-to-end tests for Linera smart contracts.
+The has trivial storage function needs to be tested. Here we do
+so by using two contracts. The contracts are created, and run.
 
-## Available Tests
-
-### 1. Create and Call Test
-Tests the create-and-call smart contract functionality.
-
-### 2. Blob Access Test  
-Tests the blob-access smart contract functionality:
-- Publishes a blob to storage
-- Stores the blob hash in the smart contract
-- Retrieves blob content through the smart contract service
-- Tests invalid blob hash access (should fail gracefully)
-- Verifies stored blob hashes
-
-## How to run
-
-First, compile "linera-server", "linera-proxy" and "linera" and put links to them
-in the directory "target/debug" (or "target/release" if that is your fancy).
-
-Then run the tests:
+The test is run as:
 
 ```bash
-# Run specific test
-cargo run -- create-and-call
-cargo run -- blob-access
-
-# Run all tests
-cargo run -- all
+# Run the test
+./run_test.sh
 ```
+
+It does create some contracts and then tests the behavior.
