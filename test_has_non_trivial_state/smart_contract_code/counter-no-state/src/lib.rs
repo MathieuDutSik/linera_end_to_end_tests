@@ -18,13 +18,14 @@ impl ServiceAbi for CounterNoStateAbi {
     type QueryResponse = u64;
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CounterRequest {
+    Increment(u64,bool),
     Query,
-    Increment(u64),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum CounterOperation {
-    Increment(u64),
+    Increment(u64,bool),
+    Query,
 }

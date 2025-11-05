@@ -45,11 +45,12 @@ impl Service for StateTrivialityService {
                 self.runtime
                     .query_application(application_id, &counter_request)
             }
-            StateTrivialityRequest::CreateAndCall(bytecode, calldata, increment) => {
+            StateTrivialityRequest::CreateAndCall(bytecode, calldata, increment, do_save) => {
                 let operation = StateTrivialityOperation::CreateAndCall(
                     bytecode,
                     calldata,
                     increment,
+                    do_save,
                 );
                 self.runtime.schedule_operation(&operation);
                 0

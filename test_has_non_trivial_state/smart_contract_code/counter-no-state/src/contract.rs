@@ -42,18 +42,30 @@ impl Contract for CounterContract {
     }
 
     async fn execute_operation(&mut self, operation: CounterOperation) -> u64 {
-        let previous_value = self.state.value.get();
-        let CounterOperation::Increment(value) = operation;
-        let new_value = previous_value + value;
-        self.state.value.set(new_value);
-        new_value
+        let (value, do_save) = match operation {
+            CounterOperation::Increment(value, do_save) => {
+                let previous_value = self.state.value.get();
+                let new_value = previous_value + value;
+                self.state.value.set(new_value);
+                (new_value, do_save)
+            }
+            CounterOperation::Query => {
+                let value = *self.state.value.get();
+                (value, false)
+            }
+        };
+        if do_save {
+            self.state.save().await.expect("Failed to save state");
+        }
+        value
     }
 
     async fn execute_message(&mut self, _message: ()) {
         panic!("Counter application doesn't support any cross-chain messages");
     }
 
-    async fn store(mut self) {
-        self.state.save().await.expect("Failed to save state");
+    async fn store(self) {
+//        panic!("Disabling the store as an experiment");
+//        self.state.save().await.expect("Failed to save state");
     }
 }

@@ -8,7 +8,7 @@ mod state;
 use counter_no_state::{CounterNoStateAbi, CounterOperation, CounterRequest};
 use state_triviality::{StateTrivialityAbi, StateTrivialityOperation};
 use linera_sdk::{
-    linera_base_types::{Bytecode, VmRuntime, WithContractAbi},
+    linera_base_types::{ApplicationId, Bytecode, CryptoHash, VmRuntime, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
@@ -47,47 +47,82 @@ impl Contract for StateTrivialityContract {
     }
 
     async fn execute_operation(&mut self, operation: StateTrivialityOperation) {
-        let StateTrivialityOperation::CreateAndCall(
-            contract_bytes,
-            service_bytes,
-            increment_value,
-        ) = operation;
+        match operation {
+            StateTrivialityOperation::CreateAndCall(contract_bytes, service_bytes, increment_value, do_save) => {
+                // Step 1: Convert Vec<u8> to Bytecode and publish module with Wasm runtime
+                let contract_bytecode = Bytecode::new(contract_bytes);
+                let service_bytecode = Bytecode::new(service_bytes);
+                let module_id =
+                    self.runtime
+                    .publish_module(contract_bytecode, service_bytecode, VmRuntime::Wasm);
 
-        // Step 1: Convert Vec<u8> to Bytecode and publish module with Wasm runtime
-        let contract_bytecode = Bytecode::new(contract_bytes);
-        let service_bytecode = Bytecode::new(service_bytes);
-        let module_id =
-            self.runtime
-                .publish_module(contract_bytecode, service_bytecode, VmRuntime::Wasm);
+                // Step 2: Create application with initialization value
+                let initialization_value = ();
+                let application_id = self
+                    .runtime
+                    .create_application::<CounterNoStateAbi, (), ()>(
+                        module_id,
+                        &(),
+                        &initialization_value,
+                        vec![],
+                    );
+                self.state.value.set(Some(application_id));
 
-        // Step 2: Create application with initialization value
-        let initialization_value = ();
-        let application_id = self
-            .runtime
-            .create_application::<CounterNoStateAbi, (), ()>(
-                module_id,
-                &(),
-                &initialization_value,
-                vec![],
-            );
-        self.state.value.set(Some(application_id));
+                let app_id_untyped = application_id.forget_abi();
+                let is_trivial = self.runtime.has_trivial_storage(app_id_untyped);
+                assert!(is_trivial, "app_id_untyped should be trivial");
 
-        let app_id_untypes = application_id.forget_abi();
-        let is_trivial = self.runtime.has_non_trivial_storage(app_id_untypes);
-        assert!(is_trivial);
+                let vec = [0_u8; 32];
+                let hash = CryptoHash::from(vec);
+                let app_id_not_exist = ApplicationId::new(hash);
+                let is_trivial = self.runtime.has_trivial_storage(app_id_not_exist);
+                assert!(is_trivial, "app_id_not_exist should be trivial");
 
-        // Step 3: Call the service. It should return the value before
-        // the initialization of this contract and thus zero.
-        let counter_request = CounterRequest::Query;
-        let value = self.runtime.query_service(application_id, counter_request);
-        assert_eq!(value, 0);
+                // Step 3: Call the service. It should return the value before
+                // the initialization of this contract and thus zero.
+                // A: operation
+                let query_operation = CounterOperation::Query;
+                let val = self.runtime.call_application(true, application_id, &query_operation);
+                assert!(val == 0, "application_id starts at 0");
 
-        // Step 4: Call the contract with counter increment operation
-        let counter_operation = CounterOperation::Increment(increment_value);
-        self.runtime
-            .call_application(true, application_id, &counter_operation);
-        let is_trivial = self.runtime.has_non_trivial_storage(app_id_untypes);
-        assert!(!is_trivial); // Should be false since the operation has done something.
+                // B: query
+                let query_request = CounterRequest::Query;
+                let val = self.runtime.query_service(application_id, &query_request);
+                assert!(val == 0, "initial value should be zero");
+
+                // Step 4: Call the contract with counter increment operation
+                let counter_operation = CounterOperation::Increment(increment_value, do_save);
+                self.runtime
+                    .call_application(true, application_id, &counter_operation);
+
+                // Step 5: Querying the value of the application
+                // A: operation
+                let query_operation = CounterOperation::Query;
+                let val = self.runtime.call_application(true, application_id, &query_operation);
+                assert!(val == increment_value, "application_id has been increased, visible in contracts");
+
+                // B: query
+                let val = self.runtime.query_service(application_id, &query_request);
+                if do_save {
+                    assert!(val == 0, "even after increment the service should return the basic state");
+                } else {
+                    assert!(val == 0, "Not saved, therefore the service value is 0");
+                }
+
+                let is_trivial = self.runtime.has_trivial_storage(app_id_untyped);
+                if do_save {
+                    assert!(!is_trivial, "app_id_untyped should have non-trivial storage since it has been saved");
+                } else {
+                    assert!(is_trivial, "no save, therefore trivial state");
+                }
+            },
+            StateTrivialityOperation::TestTrivialState(expected_value) => {
+                let app_id = *self.state.value.get();
+                let app_id: ApplicationId = app_id.unwrap().forget_abi();
+                let is_trivial = self.runtime.has_trivial_storage(app_id);
+                assert_eq!(is_trivial, expected_value);
+            }
+        }
     }
 
     async fn execute_message(&mut self, _message: ()) {

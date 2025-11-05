@@ -18,13 +18,14 @@ impl ServiceAbi for StateTrivialityAbi {
     type QueryResponse = u64;
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum StateTrivialityRequest {
     Query,
-    CreateAndCall(Vec<u8>, Vec<u8>, u64),
+    CreateAndCall(Vec<u8>, Vec<u8>, u64, bool),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum StateTrivialityOperation {
-    CreateAndCall(Vec<u8>, Vec<u8>, u64),
+    CreateAndCall(Vec<u8>, Vec<u8>, u64, bool),
+    TestTrivialState(bool),
 }

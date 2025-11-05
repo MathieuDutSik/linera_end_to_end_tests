@@ -606,25 +606,33 @@ impl SpecifiedLocalNet {
     }
 
     async fn initialize_storage(&mut self, validator: usize) -> Result<()> {
+        println!("initialize_storage, step 1");
         let namespace = format!("{}_server_{}_db", self.common_namespace, validator);
         let inner_storage_config = self.common_storage_config.clone();
+        println!("initialize_storage, step 2");
         let storage = StorageConfig {
             inner_storage_config,
             namespace,
         };
+        println!("initialize_storage, step 3");
         let mut command = self.command_for_binary("linera").await?;
+        println!("initialize_storage, step 4");
         if let Ok(var) = env::var(SERVER_ENV) {
             command.args(var.split_whitespace());
         }
+        println!("initialize_storage, step 5");
         command.args(["storage", "initialize"]);
+        println!("initialize_storage, step 6");
         command
             .args(["--storage", &storage.to_string()])
             .args(["--genesis", "genesis.json"])
             .spawn_and_wait_for_stdout()
             .await?;
+        println!("initialize_storage, step 7");
 
         self.initialized_validator_storages
             .insert(validator, storage);
+        println!("initialize_storage, step 8");
         Ok(())
     }
 

@@ -317,12 +317,13 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     net.stop_validator(2).await?;
     net.stop_validator(3).await?;
 
-    ChoiceVersion::V1.set_links();
+    net.directory = get_directory_new_schema();
+//    ChoiceVersion::V1.set_links();
 
     println!("test_wasm_end_to_end_social_event_streams, step 10");
-    net.restart_validator(2).await?;
+    net.start_validator(2).await?;
     println!("test_wasm_end_to_end_social_event_streams, step 11");
-    net.restart_validator(3).await?;
+    net.start_validator(3).await?;
     println!("test_wasm_end_to_end_social_event_streams, step 12");
 
     // Making the social posts. And checking
@@ -333,11 +334,22 @@ async fn test_wasm_end_to_end_social_event_streams() -> anyhow::Result<()> {
     net.stop_validator(0).await?;
     net.stop_validator(1).await?;
 
-    net.restart_validator(0).await?;
-    net.restart_validator(1).await?;
+    net.start_validator(0).await?;
+    net.start_validator(1).await?;
 
     // Making the social posts. And checking
     access_points.social_make_posts(&mut notifications2, "Third post").await?;
+
+
+    // Killing the two remaining old validators. Restarting them with the moved code.
+    net.stop_validator(0).await?;
+    net.stop_validator(1).await?;
+
+    net.start_validator(0).await?;
+    net.start_validator(1).await?;
+
+    // Making the social posts. And checking
+    access_points.social_make_posts(&mut notifications2, "Fourth post").await?;
 
     // Winding down.
     access_points.node_service1.ensure_is_running()?;
