@@ -22,6 +22,7 @@ impl ServiceAbi for StateTrivialityAbi {
 pub enum StateTrivialityRequest {
     Query,
     CreateAndCall(Vec<u8>, Vec<u8>, u64, bool),
+    TestTrivialState(bool),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

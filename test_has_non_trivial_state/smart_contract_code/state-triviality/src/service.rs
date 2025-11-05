@@ -55,6 +55,11 @@ impl Service for StateTrivialityService {
                 self.runtime.schedule_operation(&operation);
                 0
             }
+            StateTrivialityRequest::TestTrivialState(test)  => {
+                let operation = StateTrivialityOperation::TestTrivialState(test);
+                self.runtime.schedule_operation(&operation);
+                0
+            }
         }
     }
 }

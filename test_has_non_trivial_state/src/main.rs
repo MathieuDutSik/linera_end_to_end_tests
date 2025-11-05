@@ -28,8 +28,8 @@ async fn main() -> Result<()> {
     let path1 = env::current_dir()?.join("./smart_contract_code/").join(name1);
     let (counter_contract_path, counter_service_path) =
         client.build_application(&path1, name1, true).await?;
-    let counter_contract_bytecode = Bytecode::load_from_file(&counter_contract_path).await?;
-    let counter_service_bytecode = Bytecode::load_from_file(&counter_service_path).await?;
+    let counter_contract_bytecode = Bytecode::load_from_file(&counter_contract_path)?;
+    let counter_service_bytecode = Bytecode::load_from_file(&counter_service_path)?;
     let contract_bytes = counter_contract_bytecode.bytes;
     let service_bytes = counter_service_bytecode.bytes;
 
@@ -55,9 +55,7 @@ async fn main() -> Result<()> {
     println!("Step 3: Starting node service and creating application wrapper");
     let port = get_node_port().await;
     let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-    let application = node_service
-        .make_application(&chain, &application_id)
-        .await?;
+    let application = node_service.make_application(&chain, &application_id)?;
 
     // Step 4: Call a mutation that takes the Vec<u8> of "contract", "service",
     println!("Step 4: Calling CreateAndCall mutation with increment_value=5");
@@ -66,10 +64,14 @@ async fn main() -> Result<()> {
         contract_bytes,
         service_bytes,
         increment_value,
+        true,
     );
     application.run_json_query(&mutation_request).await?;
 
-    println!("Test completed successfully!");
+    // Step 5: Now reading again to see if things have changed.
+    let mutation_request = StateTrivialityRequest::TestTrivialState(false);
+    application.run_json_query(&mutation_request).await?;
+
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;
