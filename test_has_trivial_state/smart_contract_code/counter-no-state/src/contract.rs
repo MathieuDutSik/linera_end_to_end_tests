@@ -65,7 +65,6 @@ impl Contract for CounterContract {
     }
 
     async fn store(self) {
-//        panic!("Disabling the store as an experiment");
-//        self.state.save().await.expect("Failed to save state");
+        // No operation being done here
     }
 }
