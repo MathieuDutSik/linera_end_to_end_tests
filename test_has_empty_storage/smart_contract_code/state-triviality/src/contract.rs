@@ -69,13 +69,13 @@ impl Contract for StateTrivialityContract {
                 self.state.app_id.set(Some(application_id));
 
                 let app_id_untyped = application_id.forget_abi();
-                let is_trivial = self.runtime.has_trivial_storage(app_id_untyped);
+                let is_trivial = self.runtime.has_empty_storage(app_id_untyped);
                 assert!(is_trivial, "app_id_untyped should be trivial");
 
                 let vec = [0_u8; 32];
                 let hash = CryptoHash::from(vec);
                 let app_id_not_exist = ApplicationId::new(hash);
-                let is_trivial = self.runtime.has_trivial_storage(app_id_not_exist);
+                let is_trivial = self.runtime.has_empty_storage(app_id_not_exist);
                 assert!(is_trivial, "app_id_not_exist should be trivial");
 
                 // Step 3: Call the service. It should return the value before
@@ -109,7 +109,7 @@ impl Contract for StateTrivialityContract {
                     assert!(val == 0, "Not saved, therefore the service value is 0");
                 }
 
-                let is_trivial = self.runtime.has_trivial_storage(app_id_untyped);
+                let is_trivial = self.runtime.has_empty_storage(app_id_untyped);
                 if do_save {
                     assert!(!is_trivial, "app_id_untyped should have non-trivial storage since it has been saved");
                 } else {
@@ -119,7 +119,7 @@ impl Contract for StateTrivialityContract {
             StateTrivialityOperation::TestTrivialState(expected_value) => {
                 let app_id = *self.state.app_id.get();
                 let app_id: ApplicationId = app_id.unwrap().forget_abi();
-                let is_trivial = self.runtime.has_trivial_storage(app_id);
+                let is_trivial = self.runtime.has_empty_storage(app_id);
                 assert_eq!(is_trivial, expected_value);
             }
         }

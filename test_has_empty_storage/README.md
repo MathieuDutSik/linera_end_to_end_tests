@@ -1,4 +1,4 @@
-# Testing the `has_trivial_storage` functionality of Linera.
+# Testing the `has_empty_storage` functionality of Linera.
 
 The has trivial storage function needs to be tested. Here we do
 so by using two contracts. The contracts are created, and run.
