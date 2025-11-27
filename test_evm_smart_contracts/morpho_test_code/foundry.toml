@@ -1,0 +1,20 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+names = true
+sizes = true
+via_ir = true
+optimizer = true
+optimizer_runs = 999999
+bytecode_hash = "none"
+evm_version = "paris"
+
+[profile.default.invariant]
+runs = 1024
+depth = 32
+fail_on_revert = true
+
+[profile.default.fmt]
+wrap_comments = true
