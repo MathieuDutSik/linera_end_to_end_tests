@@ -1,0 +1,24 @@
+[package]
+name = "test_morpho_non_reentrant"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.80"
+alloy-sol-types = "1.1.2"
+bcs = "0.1.6"
+futures = "0.3.30"
+tokio = { version = "1.36" }
+tracing = { version = "0.1.40", features = ["release_max_level_trace"] }
+tracing-subscriber = { version = "0.3.18", default-features = false, features = [
+    "env-filter",
+] }
+serde_json = "1.0.114"
+tempfile = "3.20.0"
+hex = "0.4.3"
+
+# Linera dependencies from GitHub
+linera-base = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second/linera-base", features = ["test", "revm"] }
+linera-service = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second/linera-service", features = ["test", "storage-service", "revm"] }
+linera-sdk = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second/linera-sdk", features = ["test"] }
+

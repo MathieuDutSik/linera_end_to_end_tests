@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Test script for EVM smart contracts
+set -e
+
+export STORAGE_SERVICE_PORT=1235
+
+
+if netstat -an 2>/dev/null | grep -q "[.:]$STORAGE_SERVICE_PORT[[:space:]]" ; then
+    echo "A storage service is apparently running on $STORAGE_SERVICE_PORT. Let us continue"
+else
+    echo "No one is listering on $STORAGE_SERVICE_PORT."
+    echo "No storage service running. Please run one with the command"
+    echo "cargo run --release -p linera-storage-service -- memory --endpoint 127.0.0.1:1235"
+    echo "Exisint"
+    exit 1
+fi
+
+
+if [ ! -d "linera-protocol_second_revm" ]; then
+    git clone https://github.com/MathieuDutSik/linera-protocol_second linera-protocol_second_revm
+else
+    echo "Directory already exists, skipping clone."
+fi
+cd linera-protocol_second_revm && cargo build --features revm && cd ..
+
+echo "Building EVM smart contract test..."
+cargo build
+
+echo "Linking linera binaries..."
+
+export LINERA_PATH=$PWD/linera-protocol_second_revm
+ln -sf $LINERA_PATH/target/debug/linera target/debug/linera
+ln -sf $LINERA_PATH/target/debug/linera-server target/debug/linera-server
+ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy
+
+echo "Running some EVM tests..."
+#cargo run evm-counter
+cargo run morpho_not_reentrant
+
+echo "EVM test completed successfully!"
