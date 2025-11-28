@@ -43,6 +43,35 @@ fn write_compilation_json(path: &Path, file_name: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+
+pub fn read_bytecode_from_file(path: &PathBuf, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {
+    println!("read_bytecode_from_file, path={}", path.display());
+    let contents = std::fs::read_to_string(path)?;
+    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
+    let contracts = json_data
+        .get("contracts")
+        .with_context(|| format!("failed to get contracts in json_data={json_data}"))?;
+    let file_name_contract = contracts
+        .get(file_name)
+        .with_context(|| format!("failed to get {file_name}"))?;
+    let test_data = file_name_contract
+        .get(contract_name)
+        .with_context(|| format!("failed to get contract_name={contract_name}"))?;
+    let evm_data = test_data
+        .get("evm")
+        .with_context(|| format!("failed to get evm in test_data={test_data}"))?;
+    let bytecode = evm_data
+        .get("bytecode")
+        .with_context(|| format!("failed to get bytecode in evm_data={evm_data}"))?;
+    let object = bytecode
+        .get("object")
+        .with_context(|| format!("failed to get object in bytecode={bytecode}"))?;
+    let object = object.to_string();
+    let object = object.trim_matches(|c| c == '"').to_string();
+    Ok(hex::decode(&object)?)
+}
+
+
 fn get_bytecode_path(path: &Path, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {
     let config_path = path.join("config.json");
     write_compilation_json(&config_path, file_name)?;
@@ -59,29 +88,7 @@ fn get_bytecode_path(path: &Path, file_name: &str, contract_name: &str) -> anyho
         .status()?;
     assert!(status.success());
 
-    let contents = std::fs::read_to_string(output_path)?;
-    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
-    let contracts = json_data
-        .get("contracts")
-        .with_context(|| format!("failed to get contracts in json_data={json_data}"))?;
-    let file_name_contract = contracts
-        .get(file_name)
-        .context("failed to get {file_name}")?;
-    let test_data = file_name_contract
-        .get(contract_name)
-        .with_context(|| format!("failed to get contract_name={contract_name}"))?;
-    let evm_data = test_data
-        .get("evm")
-        .with_context(|| format!("failed to get evm in test_data={test_data}"))?;
-    let bytecode = evm_data
-        .get("bytecode")
-        .with_context(|| format!("failed to get bytecode in evm_data={evm_data}"))?;
-    let object = bytecode
-        .get("object")
-        .with_context(|| format!("failed to get object in bytecode={bytecode}"))?;
-    let object = object.to_string();
-    let object = object.trim_matches(|c| c == '"').to_string();
-    Ok(hex::decode(&object)?)
+    read_bytecode_from_file(&output_path, file_name, contract_name)
 }
 
 pub fn get_bytecode(source_code: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {

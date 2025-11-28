@@ -1,0 +1,20 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "SimpleNonReentrantTest.sol": {
+      "urls": ["test/SimpleNonReentrantTest.sol"]
+    }
+  },
+  "settings": {
+    "viaIR": true,
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": ["evm.bytecode"]
+      }
+    }
+  }
+}

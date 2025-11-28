@@ -16,20 +16,17 @@ else
     exit 1
 fi
 
-
-if [ ! -d "linera-protocol_second_revm" ]; then
-    git clone https://github.com/MathieuDutSik/linera-protocol_second linera-protocol_second_revm
-else
-    echo "Directory already exists, skipping clone."
-fi
-cd linera-protocol_second_revm && cargo build --features revm && cd ..
+cd /Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second && cargo build --features revm && cd /Users/mathieudutoursikiric/GITall/GITmathieu/linera_end_to_end_tests/test_evm_smart_contracts
 
 echo "Building EVM smart contract test..."
 cargo build
 
+
+
+
 echo "Linking linera binaries..."
 
-export LINERA_PATH=$PWD/linera-protocol_second_revm
+export LINERA_PATH=/Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second
 ln -sf $LINERA_PATH/target/debug/linera target/debug/linera
 ln -sf $LINERA_PATH/target/debug/linera-server target/debug/linera-server
 ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy
