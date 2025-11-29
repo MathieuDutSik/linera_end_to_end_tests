@@ -1,14 +1,18 @@
 use anyhow::Result;
-use alloy_sol_types::{sol, SolCall, SolValue};
-use linera_base::vm::{VmRuntime, EvmInstantiation, EvmOperation, EvmQuery};
+use alloy_sol_types::sol;
+//use alloy_sol_types::{SolCall, SolValue};
+use linera_base::vm::{EvmOperation, EvmQuery};
 use linera_sdk::{
-    abis::evm::EvmAbi,
+//    abis::evm::EvmAbi,
     linera_base_types::Amount,
 };
-use std::path::PathBuf;
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+};
 
 mod solidity;
-use solidity::{temporary_write_evm_module, read_bytecode_from_file};
+use solidity::read_and_publish_contracts;
 
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, LocalNetConfig, ProcessInbox, Database},
@@ -16,11 +20,6 @@ use linera_service::cli_wrappers::{
 };
 use std::env;
 
-
-
-// Linera Solidity library constants
-const LINERA_SOL: &str = include_str!("../solidity/Linera.sol");
-const LINERA_TYPES_SOL: &str = include_str!("../solidity/LineraTypes.sol");
 
 fn get_zero_operation(operation: impl alloy_sol_types::SolCall) -> Result<EvmQuery, bcs::Error> {
     let operation = EvmOperation::new(Amount::ZERO, operation.abi_encode());
@@ -55,24 +54,9 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1");
     let path = PathBuf::from("morpho_test_code/result.out");
     println!("test_evm_end_to_end_morpho_not_reentrant, step 2");
-    let module = read_bytecode_from_file(&path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest")?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 |module|={}", module.len());
-    let (evm_contract, _dir) = temporary_write_evm_module(module)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 4");
 
-    let constructor_argument = Vec::new();
-    let instantiation_argument = EvmInstantiation::default();
-    let application_id = client
-        .publish_and_create::<EvmAbi, Vec<u8>, EvmInstantiation>(
-            evm_contract.clone(),
-            evm_contract,
-            VmRuntime::Evm,
-            &constructor_argument,
-            &instantiation_argument,
-            &[],
-            None,
-        )
-        .await?;
+    let map = HashMap::new();
+    let application_id = read_and_publish_contracts(&client, &path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest", &map).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 5");
     println!("test_evm_end_to_end_morpho_not_reentrant, application_id={:?}", application_id);
 
