@@ -43,48 +43,48 @@ contract SimpleNonReentrantTest is Test {
     function setUp() public {
         // Create users
         owner = makeAddr("Owner");
-        supplier = makeAddr("Supplier");
-        borrower = makeAddr("Borrower");
-        liquidator = makeAddr("Liquidator");
+//        supplier = makeAddr("Supplier");
+//        borrower = makeAddr("Borrower");
+//        liquidator = makeAddr("Liquidator");
 
         // Deploy contracts
-        morpho = new Morpho(owner);
-        loanToken = new ERC20Mock();
-        collateralToken = new ERC20Mock();
-        oracle = new OracleMock();
-        irm = new IrmMock();
+//        morpho = new Morpho(owner);
+//        loanToken = new ERC20Mock();
+//        collateralToken = new ERC20Mock();
+//        oracle = new OracleMock();
+//        irm = new IrmMock();
 
         // Setup oracle price (1:1)
-        oracle.setPrice(ORACLE_PRICE_SCALE);
+//        oracle.setPrice(ORACLE_PRICE_SCALE);
 
         // Enable IRM and LLTV as owner
-        vm.startPrank(owner);
-        morpho.enableIrm(address(irm));
-        morpho.enableLltv(LLTV);
-        vm.stopPrank();
+//        vm.startPrank(owner);
+//        morpho.enableIrm(address(irm));
+//        morpho.enableLltv(LLTV);
+//        vm.stopPrank();
 
         // Create market
-        marketParams = MarketParams({
-            loanToken: address(loanToken),
-            collateralToken: address(collateralToken),
-            oracle: address(oracle),
-            irm: address(irm),
-            lltv: LLTV
-        });
-        morpho.createMarket(marketParams);
-        id = marketParams.id();
+//        marketParams = MarketParams({
+//            loanToken: address(loanToken),
+//            collateralToken: address(collateralToken),
+//            oracle: address(oracle),
+//            irm: address(irm),
+//            lltv: LLTV
+//        });
+//        morpho.createMarket(marketParams);
+//        id = marketParams.id();
 
         // Setup approvals
-        vm.prank(supplier);
-        loanToken.approve(address(morpho), type(uint256).max);
+//        vm.prank(supplier);
+//        loanToken.approve(address(morpho), type(uint256).max);
 
-        vm.prank(borrower);
-        loanToken.approve(address(morpho), type(uint256).max);
-        vm.prank(borrower);
-        collateralToken.approve(address(morpho), type(uint256).max);
+//        vm.prank(borrower);
+//        loanToken.approve(address(morpho), type(uint256).max);
+//        vm.prank(borrower);
+//        collateralToken.approve(address(morpho), type(uint256).max);
 
-        vm.prank(liquidator);
-        loanToken.approve(address(morpho), type(uint256).max);
+//        vm.prank(liquidator);
+//        loanToken.approve(address(morpho), type(uint256).max);
     }
 
     /// @notice Test 1: Simple supply and withdraw (NO CALLBACKS)

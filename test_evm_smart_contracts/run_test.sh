@@ -18,6 +18,8 @@ fi
 
 cd /Users/mathieudutoursikiric/GITlineraOpen/GITevm_morpho_related_issues/linera-protocol_second && cargo build --features revm && cd /Users/mathieudutoursikiric/GITall/GITmathieu/linera_end_to_end_tests/test_evm_smart_contracts
 
+cd morpho_test_code && ./solc-0.8.19 --standard-json < config.json > result.out && cd ..
+
 echo "Building EVM smart contract test..."
 cargo build
 

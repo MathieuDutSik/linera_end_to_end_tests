@@ -5,12 +5,21 @@
 
 use std::{
     fs::File,
+    collections::HashMap,
     io::Write,
     path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
 use anyhow::Context;
+use linera_sdk::abis::evm::EvmAbi;
+use linera_base::{
+    identifiers::ApplicationId,
+    vm::EvmInstantiation,
+    vm::VmRuntime,
+};
+use linera_service::cli_wrappers::ClientWrapper;
+
 //use revm_primitives::{Address, U256};
 use serde_json::Value;
 use tempfile::{tempdir, TempDir};
@@ -42,6 +51,71 @@ fn write_compilation_json(path: &Path, file_name: &str) -> anyhow::Result<()> {
     )?;
     Ok(())
 }
+
+
+pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_json::Value, constructor_argument: &Vec<u8>, instantiation_argument: &EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
+    let evm_data = data_contract
+        .get("evm")
+        .with_context(|| format!("failed to get evm in data_contract={data_contract}"))?;
+    let bytecode = evm_data
+        .get("bytecode")
+        .with_context(|| format!("failed to get bytecode in evm_data={evm_data}"))?;
+    let object = bytecode
+        .get("object")
+        .with_context(|| format!("failed to get object in bytecode={bytecode}"))?;
+    let object = object.to_string();
+    let object = object.trim_matches(|c| c == '"').to_string();
+    let module = hex::decode(&object)?;
+    let (evm_contract, _dir) = temporary_write_evm_module(module)?;
+    Ok(client
+        .publish_and_create::<EvmAbi, Vec<u8>, EvmInstantiation>(
+            evm_contract.clone(),
+            evm_contract,
+            VmRuntime::Evm,
+            constructor_argument,
+            instantiation_argument,
+            &[],
+            None,
+        )
+        .await?)
+}
+
+
+
+pub async fn read_and_publish_contracts(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, map: &HashMap<String, (Vec<u8>, EvmInstantiation)>) -> anyhow::Result<ApplicationId<EvmAbi>> {
+    println!("read_bytecode_from_file, path={}", path.display());
+    let contents = std::fs::read_to_string(path)?;
+    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
+    let contracts = json_data
+        .get("contracts")
+        .and_then(|c| c.as_object())
+        .with_context(|| format!("contracts is missing or not an object: {json_data}"))?;
+    let file_name_contract = contracts
+        .get(file_name)
+        .with_context(|| format!("failed to get {file_name}"))?;
+    let contract_keys: Vec<&String> = contracts.keys().collect();
+    println!("contract_keys={contract_keys:?}");
+    let mut return_application_id = None;
+    for contract_key in contract_keys {
+        let (constructor_argument, instantiation_argument) = match map.get(contract_key) {
+            None => (Vec::<u8>::new(), EvmInstantiation::default()),
+            Some(const_inst) => const_inst.clone(),
+        };
+        let data_contract = file_name_contract
+            .get(contract_key)
+            .with_context(|| format!("failed to get contract_key={contract_key}"))?;
+        let application_id = publish_evm_contract(client, data_contract, &constructor_argument, &instantiation_argument).await?;
+        if contract_key == contract_name {
+            return_application_id = Some(application_id);
+        }
+    }
+    let application_id = return_application_id.expect("We were unable to find contract_name in the list");
+    Ok(application_id)
+}
+
+
+
+
 
 
 pub fn read_bytecode_from_file(path: &PathBuf, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {

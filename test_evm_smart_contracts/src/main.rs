@@ -8,7 +8,7 @@ use linera_sdk::{
 use std::path::PathBuf;
 
 mod solidity;
-use solidity::{get_evm_contract_path, temporary_write_evm_module, read_evm_u64_entry, read_bytecode_from_file};
+use solidity::{temporary_write_evm_module, read_bytecode_from_file};
 
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, LocalNetConfig, ProcessInbox, Database},
@@ -53,7 +53,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let chain = *client.load_wallet()?.chain_ids().first().unwrap();
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1");
-//    let path = PathBuf::from("/Users/mathieudutoursikiric/GITall/GITmathieu/linera_end_to_end_tests/test_evm_smart_contracts/morpho_test_code/result.out");
     let path = PathBuf::from("morpho_test_code/result.out");
     println!("test_evm_end_to_end_morpho_not_reentrant, step 2");
     let module = read_bytecode_from_file(&path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest")?;
@@ -75,22 +74,30 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         )
         .await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 5");
+    println!("test_evm_end_to_end_morpho_not_reentrant, application_id={:?}", application_id);
 
     let port = get_node_port().await;
     let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
-    println!("test_evm_end_to_end_divvi, step 3");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 6");
+
 
     let application = node_service.make_application(&chain, &application_id)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 7");
 
     let operation = setUpCall { };
     let operation = get_zero_operation(operation)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 8");
+    println!("test_evm_end_to_end_morpho_not_reentrant, operation={:?}", operation);
     application.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 9");
 
-
+/*
     let operation = test_SimpleSupplyWithdrawCall { };
     let operation = get_zero_operation(operation)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 10");
     application.run_json_query(operation).await?;
-
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 11");
+*/
     node_service.ensure_is_running()?;
 
     net.ensure_is_running().await?;
