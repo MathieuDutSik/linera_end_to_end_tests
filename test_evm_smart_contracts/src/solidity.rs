@@ -29,6 +29,112 @@ use tempfile::TempDir;
 //const LINERA_SOL: &str = include_str!("../solidity/Linera.sol");
 //const LINERA_TYPES_SOL: &str = include_str!("../solidity/LineraTypes.sol");
 
+pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_json::Value, constructor_argument: &Vec<u8>, evm_instantiation: &EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
+    let evm_data = data_contract
+        .get("evm")
+        .with_context(|| format!("failed to get evm in data_contract={data_contract}"))?;
+    let bytecode = evm_data
+        .get("bytecode")
+        .with_context(|| format!("failed to get bytecode in evm_data={evm_data}"))?;
+    let object = bytecode
+        .get("object")
+        .with_context(|| format!("failed to get object in bytecode={bytecode}"))?;
+    let object = object.to_string();
+    let object = object.trim_matches(|c| c == '"').to_string();
+    let module = hex::decode(&object)?;
+    let (evm_contract, _dir) = temporary_write_evm_module(module)?;
+    Ok(client
+        .publish_and_create::<EvmAbi, Vec<u8>, EvmInstantiation>(
+            evm_contract.clone(),
+            evm_contract,
+            VmRuntime::Evm,
+            constructor_argument,
+            evm_instantiation,
+            &[],
+            None,
+        )
+        .await?)
+}
+
+
+
+pub async fn read_and_publish_contracts(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, map: &HashMap<(String, String), (Vec<u8>, EvmInstantiation)>) -> anyhow::Result<ApplicationId<EvmAbi>> {
+    println!("read_bytecode_from_file, path={}", path.display());
+    let contents = std::fs::read_to_string(path)?;
+    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
+    let contracts = json_data
+        .get("contracts")
+        .and_then(|c| c.as_object())
+        .with_context(|| format!("contracts is missing or not an object: {json_data}"))?;
+    let file_name_keys: Vec<&String> = contracts.keys().collect();
+    let n_file = file_name_keys.len();
+    println!("file_name_keys={file_name_keys:?}");
+    let mut return_application_id = None;
+    let mut n_application = 0;
+    for (i_file, file_name_key) in file_name_keys.into_iter().enumerate() {
+        let contract_block = contracts
+            .get(file_name_key)
+            .with_context(|| format!("failed to get {file_name_key}"))?;
+        let contract_keys: Vec<&String> = contract_block.as_object().expect("A m-a-p").keys().collect();
+        let n_contract = contract_keys.len();
+        for (i_contract, contract_key) in contract_keys.into_iter().enumerate() {
+            println!("Processing {i_file}/{n_file} - {i_contract}/{n_contract} file_name_key={file_name_key} contract_key={contract_key}");
+            let big_key: (String, String) = (file_name_key.clone(), contract_key.into());
+            let (constructor_argument, instantiation_argument) = match map.get(&big_key) {
+                None => (Vec::<u8>::new(), EvmInstantiation::default()),
+                Some(const_inst) => const_inst.clone(),
+            };
+            let data_contract = contract_block
+                .get(contract_key)
+                .with_context(|| format!("failed to get contract_key={contract_key}"))?;
+            let application_id = publish_evm_contract(client, data_contract, &constructor_argument, &instantiation_argument).await?;
+            println!("contract_key={} contract_name={}", contract_key, contract_name);
+            if file_name_key == file_name && contract_key == contract_name {
+                println!("Mathing the test");
+                return_application_id = Some(application_id);
+            }
+            n_application += 1;
+        }
+    }
+    println!("read_and_publish_contracts n_application={n_application}");
+    let application_id = return_application_id.expect("We were unable to find contract_name in the list");
+    Ok(application_id)
+}
+
+
+pub async fn read_and_publish_contract(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, constructor_argument: Vec<u8>, evm_instantiation: EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
+    println!("read_bytecode_from_file, path={}", path.display());
+    let contents = std::fs::read_to_string(path)?;
+    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
+    let contracts = json_data
+        .get("contracts")
+        .and_then(|c| c.as_object())
+        .with_context(|| format!("contracts is missing or not an object: {json_data}"))?;
+    let contract_block = contracts
+        .get(file_name)
+        .with_context(|| format!("failed to get {file_name}"))?;
+    let data_contract = contract_block
+        .get(contract_name)
+        .with_context(|| format!("failed to get contract_name={contract_name}"))?;
+    publish_evm_contract(client, data_contract, &constructor_argument, &evm_instantiation).await
+}
+
+
+
+pub fn temporary_write_evm_module(module: Vec<u8>) -> anyhow::Result<(PathBuf, TempDir)> {
+    let dir = tempfile::tempdir()?;
+    let path = dir.path();
+    let app_file = "app.json";
+    let app_path = path.join(app_file);
+    {
+        std::fs::write(app_path.clone(), &module)?;
+    }
+    let evm_contract = app_path.to_path_buf();
+    Ok((evm_contract, dir))
+}
+
+
+
 /*
 fn write_compilation_json(path: &Path, file_name: &str) -> anyhow::Result<()> {
     let mut source = File::create(path).unwrap();
@@ -57,84 +163,6 @@ fn write_compilation_json(path: &Path, file_name: &str) -> anyhow::Result<()> {
 }
 */
 
-
-pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_json::Value, constructor_argument: &Vec<u8>, instantiation_argument: &EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
-    let evm_data = data_contract
-        .get("evm")
-        .with_context(|| format!("failed to get evm in data_contract={data_contract}"))?;
-    let bytecode = evm_data
-        .get("bytecode")
-        .with_context(|| format!("failed to get bytecode in evm_data={evm_data}"))?;
-    let object = bytecode
-        .get("object")
-        .with_context(|| format!("failed to get object in bytecode={bytecode}"))?;
-    let object = object.to_string();
-    let object = object.trim_matches(|c| c == '"').to_string();
-    let module = hex::decode(&object)?;
-    let (evm_contract, _dir) = temporary_write_evm_module(module)?;
-    Ok(client
-        .publish_and_create::<EvmAbi, Vec<u8>, EvmInstantiation>(
-            evm_contract.clone(),
-            evm_contract,
-            VmRuntime::Evm,
-            constructor_argument,
-            instantiation_argument,
-            &[],
-            None,
-        )
-        .await?)
-}
-
-
-
-pub async fn read_and_publish_contracts(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, map: &HashMap<String, (Vec<u8>, EvmInstantiation)>) -> anyhow::Result<ApplicationId<EvmAbi>> {
-    println!("read_bytecode_from_file, path={}", path.display());
-    let contents = std::fs::read_to_string(path)?;
-    let json_data: serde_json::Value = serde_json::from_str(&contents)?;
-    let contracts = json_data
-        .get("contracts")
-        .and_then(|c| c.as_object())
-        .with_context(|| format!("contracts is missing or not an object: {json_data}"))?;
-    let file_name_contract = contracts
-        .get(file_name)
-        .with_context(|| format!("failed to get {file_name}"))?;
-    let contract_keys: Vec<&String> = contracts.keys().collect();
-    println!("contract_keys={contract_keys:?}");
-    let mut return_application_id = None;
-    for contract_key in contract_keys {
-        let (constructor_argument, instantiation_argument) = match map.get(contract_key) {
-            None => (Vec::<u8>::new(), EvmInstantiation::default()),
-            Some(const_inst) => const_inst.clone(),
-        };
-        let data_contract = file_name_contract
-            .get(contract_key)
-            .with_context(|| format!("failed to get contract_key={contract_key}"))?;
-        let application_id = publish_evm_contract(client, data_contract, &constructor_argument, &instantiation_argument).await?;
-        if contract_key == contract_name {
-            return_application_id = Some(application_id);
-        }
-    }
-    let application_id = return_application_id.expect("We were unable to find contract_name in the list");
-    Ok(application_id)
-}
-
-
-
-pub fn temporary_write_evm_module(module: Vec<u8>) -> anyhow::Result<(PathBuf, TempDir)> {
-    let dir = tempfile::tempdir()?;
-    let path = dir.path();
-    let app_file = "app.json";
-    let app_path = path.join(app_file);
-    {
-        std::fs::write(app_path.clone(), &module)?;
-    }
-    let evm_contract = app_path.to_path_buf();
-    Ok((evm_contract, dir))
-}
-
-
-
-/*
 pub fn read_bytecode_from_file(path: &PathBuf, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {
     println!("read_bytecode_from_file, path={}", path.display());
     let contents = std::fs::read_to_string(path)?;
@@ -161,7 +189,6 @@ pub fn read_bytecode_from_file(path: &PathBuf, file_name: &str, contract_name: &
     let object = object.trim_matches(|c| c == '"').to_string();
     Ok(hex::decode(&object)?)
 }
-*/
 
 /*
 fn get_bytecode_path(path: &Path, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use alloy_sol_types::sol;
 //use alloy_sol_types::{SolCall, SolValue};
-use linera_base::vm::{EvmOperation, EvmQuery};
+use linera_base::vm::{EvmInstantiation, EvmOperation, EvmQuery};
 use linera_sdk::{
 //    abis::evm::EvmAbi,
     linera_base_types::Amount,
@@ -12,7 +12,7 @@ use std::{
 };
 
 mod solidity;
-use solidity::read_and_publish_contracts;
+use solidity::read_and_publish_contract;
 
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, LocalNetConfig, ProcessInbox, Database},
@@ -40,32 +40,88 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let config = get_config();
 
     tracing::info!("Starting EVM Morpho non-reentrant end-to-end test");
-    // Creating the clients
-    let (mut net, client) = config.instantiate().await?;
+    // Creating the clients and multi-owner chain
+    let (mut net, client_regular) = config.instantiate().await?;
+
+    // Create additional clients for each user
+    let client_owner = net.make_client().await;
+    client_owner.wallet_init(None).await?;
+
+    let client_supplier = net.make_client().await;
+    client_supplier.wallet_init(None).await?;
+
+    let client_borrower = net.make_client().await;
+    client_borrower.wallet_init(None).await?;
+
+    let client_liquidator = net.make_client().await;
+    client_liquidator.wallet_init(None).await?;
+
+    let client_supplier2 = net.make_client().await;
+    client_supplier2.wallet_init(None).await?;
+
+    let chain1 = *client_regular.load_wallet()?.owned_chain_ids().first().unwrap();
+
+    // Generate keys for all clients
+    let owner_regular = client_regular.keygen().await?;
+    let owner_owner = client_owner.keygen().await?;
+    let owner_supplier = client_supplier.keygen().await?;
+    let owner_borrower = client_borrower.keygen().await?;
+    let owner_liquidator = client_liquidator.keygen().await?;
+    let owner_supplier2 = client_supplier2.keygen().await?;
+
+    // Open a chain owned by all six users
+    let chain2 = client_regular
+        .open_multi_owner_chain(
+            chain1,
+            vec![owner_regular, owner_owner, owner_supplier, owner_borrower, owner_liquidator, owner_supplier2],
+            vec![100, 100, 100, 100, 100, 100],
+            u32::MAX,
+            Amount::from_tokens(12),
+            10_000,
+        )
+        .await?;
+
+    // Assign chain2 to all clients
+    client_regular.assign(owner_regular, chain2).await?;
+    client_owner.assign(owner_owner, chain2).await?;
+    client_supplier.assign(owner_supplier, chain2).await?;
+    client_borrower.assign(owner_borrower, chain2).await?;
+    client_liquidator.assign(owner_liquidator, chain2).await?;
+    client_supplier2.assign(owner_supplier2, chain2).await?;
 
     sol! {
         function setUp();
         function test_SimpleSupplyWithdraw();
     }
 
-    // Building the chain
-    let chain = *client.load_wallet()?.chain_ids().first().unwrap();
-
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1");
     let path = PathBuf::from("morpho_test_code/result.out");
     println!("test_evm_end_to_end_morpho_not_reentrant, step 2");
 
-    let map = HashMap::new();
-    let application_id = read_and_publish_contracts(&client, &path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest", &map).await?;
+    let constructor_argument = Vec::new();
+    let evm_instantiation = EvmInstantiation::default();
+    let application_id = read_and_publish_contract(&client_regular, &path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest", constructor_argument, evm_instantiation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 5");
     println!("test_evm_end_to_end_morpho_not_reentrant, application_id={:?}", application_id);
 
-    let port = get_node_port().await;
-    let mut node_service = client.run_node_service(port, ProcessInbox::Skip).await?;
+    // Create node services for all clients
+    let port_regular = get_node_port().await;
+    let port_owner = get_node_port().await;
+    let port_supplier = get_node_port().await;
+    let port_borrower = get_node_port().await;
+    let port_liquidator = get_node_port().await;
+    let port_supplier2 = get_node_port().await;
+
+    let mut node_service_regular = client_regular.run_node_service(port_regular, ProcessInbox::Skip).await?;
+    let mut node_service_owner = client_owner.run_node_service(port_owner, ProcessInbox::Skip).await?;
+    let mut node_service_supplier = client_supplier.run_node_service(port_supplier, ProcessInbox::Skip).await?;
+    let mut node_service_borrower = client_borrower.run_node_service(port_borrower, ProcessInbox::Skip).await?;
+    let mut node_service_liquidator = client_liquidator.run_node_service(port_liquidator, ProcessInbox::Skip).await?;
+    let mut node_service_supplier2 = client_supplier2.run_node_service(port_supplier2, ProcessInbox::Skip).await?;
+
     println!("test_evm_end_to_end_morpho_not_reentrant, step 6");
 
-
-    let application = node_service.make_application(&chain, &application_id)?;
+    let application = node_service_regular.make_application(&chain2, &application_id)?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 7");
 
     let operation = setUpCall { };
@@ -82,7 +138,12 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     application.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 11");
 */
-    node_service.ensure_is_running()?;
+    node_service_regular.ensure_is_running()?;
+    node_service_owner.ensure_is_running()?;
+    node_service_supplier.ensure_is_running()?;
+    node_service_borrower.ensure_is_running()?;
+    node_service_liquidator.ensure_is_running()?;
+    node_service_supplier2.ensure_is_running()?;
 
     net.ensure_is_running().await?;
     net.terminate().await?;
