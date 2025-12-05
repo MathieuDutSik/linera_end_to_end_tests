@@ -94,15 +94,72 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function test_SimpleSupplyWithdraw();
     }
 
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 1");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
     let path = PathBuf::from("morpho_test_code/result.out");
     println!("test_evm_end_to_end_morpho_not_reentrant, step 2");
 
     let constructor_argument = Vec::new();
     let evm_instantiation = EvmInstantiation::default();
-    let application_id = read_and_publish_contract(&client_regular, &path, "SimpleNonReentrantTest.sol", "SimpleNonReentrantTest", constructor_argument, evm_instantiation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 5");
-    println!("test_evm_end_to_end_morpho_not_reentrant, application_id={:?}", application_id);
+
+    // Deploy ERC20Mock for loanToken
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Deploying loanToken (ERC20Mock)");
+    let loan_token_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "ERC20Mock.sol",
+        "ERC20Mock",
+        constructor_argument.clone(),
+        evm_instantiation.clone()
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, loan_token_app_id={:?}", loan_token_app_id);
+
+    // Deploy ERC20Mock for collateralToken
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 4 - Deploying collateralToken (ERC20Mock)");
+    let collateral_token_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "ERC20Mock.sol",
+        "ERC20Mock",
+        constructor_argument.clone(),
+        evm_instantiation.clone()
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, collateral_token_app_id={:?}", collateral_token_app_id);
+
+    // Deploy OracleMock
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 5 - Deploying oracle (OracleMock)");
+    let oracle_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "OracleMock.sol",
+        "OracleMock",
+        constructor_argument.clone(),
+        evm_instantiation.clone()
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, oracle_app_id={:?}", oracle_app_id);
+
+    // Deploy IrmMock
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 6 - Deploying IRM (IrmMock)");
+    let irm_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "IrmMock.sol",
+        "IrmMock",
+        constructor_argument.clone(),
+        evm_instantiation.clone()
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, irm_app_id={:?}", irm_app_id);
+
+    // Deploy SimpleNonReentrantTest
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 7 - Deploying test contract (SimpleNonReentrantTest)");
+    let test_contract_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "SimpleNonReentrantTest.sol",
+        "SimpleNonReentrantTest",
+        constructor_argument.clone(),
+        evm_instantiation
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, test_contract_app_id={:?}", test_contract_app_id);
 
     // Create node services for all clients
     let port_regular = get_node_port().await;
@@ -119,24 +176,29 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let mut node_service_liquidator = client_liquidator.run_node_service(port_liquidator, ProcessInbox::Skip).await?;
     let mut node_service_supplier2 = client_supplier2.run_node_service(port_supplier2, ProcessInbox::Skip).await?;
 
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 6");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 8 - Creating application wrappers");
 
-    let application = node_service_regular.make_application(&chain2, &application_id)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 7");
+    // Create application wrappers for all deployed contracts
+    let loan_token_app = node_service_regular.make_application(&chain2, &loan_token_app_id)?;
+    let collateral_token_app = node_service_regular.make_application(&chain2, &collateral_token_app_id)?;
+    let oracle_app = node_service_regular.make_application(&chain2, &oracle_app_id)?;
+    let irm_app = node_service_regular.make_application(&chain2, &irm_app_id)?;
+    let test_contract_app = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
 
     let operation = setUpCall { };
     let operation = get_zero_operation(operation)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 8");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Running setUp");
     println!("test_evm_end_to_end_morpho_not_reentrant, operation={:?}", operation);
-    application.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 9");
+    test_contract_app.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - setUp completed");
 
 /*
     let operation = test_SimpleSupplyWithdrawCall { };
     let operation = get_zero_operation(operation)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 10");
-    application.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 11");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running test_SimpleSupplyWithdraw");
+    test_contract_app.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - test_SimpleSupplyWithdraw completed");
 */
     node_service_regular.ensure_is_running()?;
     node_service_owner.ensure_is_running()?;
