@@ -102,7 +102,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
             address liquidatorAddress,
             address supplier2Address
         );
-        function set_up_part_a(address morphoAddress);
+        function set_up_part_a();
         function set_up_part_b();
         function set_up_part_c();
         function set_up_part_d();
@@ -223,9 +223,9 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - User addresses set");
 
-    // Step 3: Initialize Morpho and set oracle price
+    // Step 3: Verify setup (set_up_part_a)
     println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_a");
-    let operation = set_up_part_aCall { morphoAddress: morpho_address };
+    let operation = set_up_part_aCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_owner.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_a completed");

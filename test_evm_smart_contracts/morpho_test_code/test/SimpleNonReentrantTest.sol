@@ -88,14 +88,6 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
-    /// @notice Deploy mock contracts
-    function deploy_mocks() public {
-        loanToken = new ERC20Mock();
-        collateralToken = new ERC20Mock();
-        oracle = new OracleMock();
-        irm = new IrmMock();
-    }
-
     /// @notice Set user addresses
     /// @param ownerAddress The address for the owner
     /// @param supplierAddress The address for the supplier
@@ -116,11 +108,20 @@ contract SimpleNonReentrantTest {
         supplier2 = supplier2Address;
     }
 
-    /// @notice Setup Part A: Initialize Morpho contract and set oracle price
-    /// @param morphoAddress The address of the deployed Morpho contract
-    function set_up_part_a(address morphoAddress) public {
-        morpho = Morpho(morphoAddress);
+    /// @notice Deploy mock contracts
+    function deploy_mocks() public {
+        morpho = new Morpho(owner);
+        loanToken = new ERC20Mock();
+        collateralToken = new ERC20Mock();
+        oracle = new OracleMock();
+        irm = new IrmMock();
         oracle.setPrice(ORACLE_PRICE_SCALE);
+    }
+
+    /// @notice Setup Part A: Verify setup is complete
+    function set_up_part_a() public {
+        // Morpho and oracle are already set up in deploy_mocks
+        // This function is kept for compatibility
     }
 
     /// @notice Setup Part B: Enable IRM and LLTV
