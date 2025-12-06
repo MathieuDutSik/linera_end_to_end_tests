@@ -92,6 +92,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     sol! {
         function setUp();
         function test_SimpleSupplyWithdraw();
+        function setPrice(uint256 newPrice);
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -106,7 +107,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let loan_token_app_id = read_and_publish_contract(
         &client_regular,
         &path,
-        "ERC20Mock.sol",
+        "src/mocks/ERC20Mock.sol",
         "ERC20Mock",
         constructor_argument.clone(),
         evm_instantiation.clone()
@@ -118,7 +119,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let collateral_token_app_id = read_and_publish_contract(
         &client_regular,
         &path,
-        "ERC20Mock.sol",
+        "src/mocks/ERC20Mock.sol",
         "ERC20Mock",
         constructor_argument.clone(),
         evm_instantiation.clone()
@@ -130,7 +131,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let oracle_app_id = read_and_publish_contract(
         &client_regular,
         &path,
-        "OracleMock.sol",
+        "src/mocks/OracleMock.sol",
         "OracleMock",
         constructor_argument.clone(),
         evm_instantiation.clone()
@@ -142,7 +143,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let irm_app_id = read_and_publish_contract(
         &client_regular,
         &path,
-        "IrmMock.sol",
+        "src/mocks/IrmMock.sol",
         "IrmMock",
         constructor_argument.clone(),
         evm_instantiation.clone()
@@ -185,6 +186,16 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let irm_app = node_service_regular.make_application(&chain2, &irm_app_id)?;
     let test_contract_app = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
+
+    // Setup oracle price (1:1 ratio)
+    // ORACLE_PRICE_SCALE = 1e36 (from SimpleNonReentrantTest.sol line 40)
+    use alloy_primitives::U256;
+    let oracle_price_scale = U256::from(10).pow(U256::from(36));
+    let set_price_operation = setPriceCall { newPrice: oracle_price_scale };
+    let set_price_operation = get_zero_operation(set_price_operation)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 9.5 - Setting oracle price to {:?}", oracle_price_scale);
+    oracle_app.run_json_query(set_price_operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 9.6 - Oracle price set");
 
     let operation = setUpCall { };
     let operation = get_zero_operation(operation)?;
