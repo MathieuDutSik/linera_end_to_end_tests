@@ -94,21 +94,12 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function setUp();
         function test_SimpleSupplyWithdraw();
         function setPrice(uint256 newPrice);
-        function set_morpho_part_a(
-            address morphoAddress,
-            address loanTokenAddress,
-            address collateralTokenAddress,
-            address oracleAddress,
-            address irmAddress
-        );
-        function set_morpho_part_b(address irmAddress, uint256 lltv);
-        function set_morpho_part_c(
-            address loanTokenAddress,
-            address collateralTokenAddress,
-            address oracleAddress,
-            address irmAddress,
-            uint256 lltv
-        );
+        function deploy_mocks();
+        function set_up_part_a(address morphoAddress);
+        function set_up_part_b();
+        function set_up_part_c();
+        function set_up_part_d();
+        function set_up_part_e();
 
         // Morpho constructor
         struct MorphoConstructor {
@@ -123,70 +114,9 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let constructor_argument = Vec::new();
     let evm_instantiation = EvmInstantiation::default();
 
-    // Deploy ERC20Mock for loanToken
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Deploying loanToken (ERC20Mock)");
-    let loan_token_app_id = read_and_publish_contract(
-        &client_regular,
-        &path,
-        "src/mocks/ERC20Mock.sol",
-        "ERC20Mock",
-        constructor_argument.clone(),
-        evm_instantiation.clone()
-    ).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, loan_token_app_id={:?}", loan_token_app_id);
-
-    // Deploy ERC20Mock for collateralToken
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 4 - Deploying collateralToken (ERC20Mock)");
-    let collateral_token_app_id = read_and_publish_contract(
-        &client_regular,
-        &path,
-        "src/mocks/ERC20Mock.sol",
-        "ERC20Mock",
-        constructor_argument.clone(),
-        evm_instantiation.clone()
-    ).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, collateral_token_app_id={:?}", collateral_token_app_id);
-
-    // Deploy OracleMock
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 5 - Deploying oracle (OracleMock)");
-    let oracle_app_id = read_and_publish_contract(
-        &client_regular,
-        &path,
-        "src/mocks/OracleMock.sol",
-        "OracleMock",
-        constructor_argument.clone(),
-        evm_instantiation.clone()
-    ).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, oracle_app_id={:?}", oracle_app_id);
-
-    // Deploy IrmMock
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 6 - Deploying IRM (IrmMock)");
-    let irm_app_id = read_and_publish_contract(
-        &client_regular,
-        &path,
-        "src/mocks/IrmMock.sol",
-        "IrmMock",
-        constructor_argument.clone(),
-        evm_instantiation.clone()
-    ).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, irm_app_id={:?}", irm_app_id);
-
-    // Create EVM addresses for all deployed contracts
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 6.5 - Creating EVM addresses");
-    use alloy_primitives::Address;
-
-    let loan_token_address = loan_token_app_id.evm_address();
-    let collateral_token_address = collateral_token_app_id.evm_address();
-    let oracle_address = oracle_app_id.evm_address();
-    let irm_address = irm_app_id.evm_address();
-
-    println!("loan_token_address: {:?}", loan_token_address);
-    println!("collateral_token_address: {:?}", collateral_token_address);
-    println!("oracle_address: {:?}", oracle_address);
-    println!("irm_address: {:?}", irm_address);
-
     // Deploy Morpho with owner parameter
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 6.6 - Deploying Morpho");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Deploying Morpho");
+    use alloy_primitives::Address;
 
     // Extract the owner address from owner_owner
     let owner_address = owner_owner.to_evm_address().unwrap();
@@ -243,36 +173,68 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 8 - Creating application wrappers");
 
     // Create application wrappers for all deployed contracts
-    let loan_token_app = node_service_regular.make_application(&chain2, &loan_token_app_id)?;
-    let collateral_token_app = node_service_regular.make_application(&chain2, &collateral_token_app_id)?;
-    let oracle_app = node_service_regular.make_application(&chain2, &oracle_app_id)?;
-    let irm_app = node_service_regular.make_application(&chain2, &irm_app_id)?;
     let morpho_app = node_service_regular.make_application(&chain2, &morpho_app_id)?;
-    let test_contract_app = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
+
+    // Create test contract application wrappers for each user
+    let test_contract_regular = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
+    let test_contract_owner = node_service_owner.make_application(&chain2, &test_contract_app_id)?;
+    let test_contract_supplier = node_service_supplier.make_application(&chain2, &test_contract_app_id)?;
+    let test_contract_borrower = node_service_borrower.make_application(&chain2, &test_contract_app_id)?;
+    let test_contract_liquidator = node_service_liquidator.make_application(&chain2, &test_contract_app_id)?;
+    let test_contract_supplier2 = node_service_supplier2.make_application(&chain2, &test_contract_app_id)?;
+
     println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
 
-    // Setup oracle price (1:1 ratio)
-    // ORACLE_PRICE_SCALE = 1e36 (from SimpleNonReentrantTest.sol line 40)
-    use alloy_primitives::U256;
-    let oracle_price_scale = U256::from(10).pow(U256::from(36));
-    let set_price_operation = setPriceCall { newPrice: oracle_price_scale };
-    let set_price_operation = get_zero_operation(set_price_operation)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 9.5 - Setting oracle price to {:?}", oracle_price_scale);
-    oracle_app.run_json_query(set_price_operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 9.6 - Oracle price set");
-
-    let operation = setUpCall { };
+    // Step 1: Deploy mock contracts
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Deploying mocks");
+    let operation = deploy_mocksCall { };
     let operation = get_zero_operation(operation)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Running setUp");
-    println!("test_evm_end_to_end_morpho_not_reentrant, operation={:?}", operation);
-    test_contract_app.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - setUp completed");
+    test_contract_regular.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - Mocks deployed");
+
+    // Step 2: Initialize Morpho and set oracle price
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running set_up_part_a");
+    let operation = set_up_part_aCall { morphoAddress: morpho_address };
+    let operation = get_zero_operation(operation)?;
+    test_contract_owner.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - set_up_part_a completed");
+
+    // Step 3: Enable IRM and LLTV
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_b");
+    let operation = set_up_part_bCall { };
+    let operation = get_zero_operation(operation)?;
+    test_contract_owner.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_b completed");
+
+    // Step 4: Create market
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - Running set_up_part_c");
+    let operation = set_up_part_cCall { };
+    let operation = get_zero_operation(operation)?;
+    test_contract_regular.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - set_up_part_c completed");
+
+    // Step 5: Approve loan token (for all users)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - Running set_up_part_d for all users");
+    let operation = set_up_part_dCall { };
+    let operation = get_zero_operation(operation)?;
+    test_contract_supplier.run_json_query(operation.clone()).await?;
+    test_contract_borrower.run_json_query(operation.clone()).await?;
+    test_contract_liquidator.run_json_query(operation.clone()).await?;
+    test_contract_supplier2.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - set_up_part_d completed");
+
+    // Step 6: Approve collateral token (for borrower)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - Running set_up_part_e");
+    let operation = set_up_part_eCall { };
+    let operation = get_zero_operation(operation)?;
+    test_contract_borrower.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - set_up_part_e completed");
 
 /*
     let operation = test_SimpleSupplyWithdrawCall { };
     let operation = get_zero_operation(operation)?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running test_SimpleSupplyWithdraw");
-    test_contract_app.run_json_query(operation).await?;
+    test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - test_SimpleSupplyWithdraw completed");
 */
     node_service_regular.ensure_is_running()?;

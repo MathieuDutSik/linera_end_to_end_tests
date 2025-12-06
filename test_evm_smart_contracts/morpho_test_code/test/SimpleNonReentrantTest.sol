@@ -87,59 +87,48 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
-    /// @notice Setup Part A: Initialize contract instances
-    /// @param morphoAddress The address of the deployed Morpho contract
-    /// @param loanTokenAddress The address of the loan token
-    /// @param collateralTokenAddress The address of the collateral token
-    /// @param oracleAddress The address of the oracle
-    /// @param irmAddress The address of the IRM
-    function set_up_part_a(
-        address morphoAddress,
-        address loanTokenAddress,
-        address collateralTokenAddress,
-        address oracleAddress,
-        address irmAddress
-    ) public {
-        morpho = Morpho(morphoAddress);
-        loanToken = ERC20Mock(loanTokenAddress);
-        collateralToken = ERC20Mock(collateralTokenAddress);
-        oracle = OracleMock(oracleAddress);
-        irm = IrmMock(irmAddress);
+    /// @notice Deploy mock contracts
+    function deploy_mocks() public {
+        loanToken = new ERC20Mock();
+        collateralToken = new ERC20Mock();
+        oracle = new OracleMock();
+        irm = new IrmMock();
+    }
 
-        // Setup oracle price (1:1)
+    /// @notice Setup Part A: Initialize Morpho contract and set oracle price
+    /// @param morphoAddress The address of the deployed Morpho contract
+    function set_up_part_a(address morphoAddress) public {
+        morpho = Morpho(morphoAddress);
         oracle.setPrice(ORACLE_PRICE_SCALE);
     }
 
     /// @notice Setup Part B: Enable IRM and LLTV
-    /// @param irmAddress The address of the IRM to enable
-    /// @param lltv The LLTV value to enable
-    function set_up_part_b(address irmAddress, uint256 lltv) public {
-        morpho.enableIrm(irmAddress);
-        morpho.enableLltv(lltv);
+    function set_up_part_b() public {
+        morpho.enableIrm(address(irm));
+        morpho.enableLltv(LLTV);
     }
 
     /// @notice Setup Part C: Create market with given parameters
-    /// @param loanTokenAddress The address of the loan token
-    /// @param collateralTokenAddress The address of the collateral token
-    /// @param oracleAddress The address of the oracle
-    /// @param irmAddress The address of the IRM
-    /// @param lltv The LLTV value
-    function set_up_part_c(
-        address loanTokenAddress,
-        address collateralTokenAddress,
-        address oracleAddress,
-        address irmAddress,
-        uint256 lltv
-    ) public {
+    function set_up_part_c() public {
         marketParams = MarketParams({
-            loanToken: loanTokenAddress,
-            collateralToken: collateralTokenAddress,
-            oracle: oracleAddress,
-            irm: irmAddress,
-            lltv: lltv
+            loanToken: address(loanToken),
+            collateralToken: address(collateralToken),
+            oracle: address(oracle),
+            irm: address(irm),
+            lltv: LLTV
         });
         morpho.createMarket(marketParams);
         id = marketParams.id();
+    }
+
+    /// @notice Setup Part D: Approve loan token for Morpho
+    function set_up_part_d() public {
+        loanToken.approve(address(morpho), type(uint256).max);
+    }
+
+    /// @notice Setup Part E: Approve collateral token for Morpho
+    function set_up_part_e() public {
+        collateralToken.approve(address(morpho), type(uint256).max);
     }
 
     /// @notice Test 1: Simple supply and withdraw (NO CALLBACKS)
