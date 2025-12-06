@@ -87,6 +87,38 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
+    /// @notice Setup Morpho Part A: Enable IRM and LLTV
+    /// @param irmAddress The address of the IRM to enable
+    /// @param lltv The LLTV value to enable
+    function set_morpho_part_a(address irmAddress, uint256 lltv) public {
+        morpho.enableIrm(irmAddress);
+        morpho.enableLltv(lltv);
+    }
+
+    /// @notice Setup Morpho Part B: Create market with given parameters
+    /// @param loanTokenAddress The address of the loan token
+    /// @param collateralTokenAddress The address of the collateral token
+    /// @param oracleAddress The address of the oracle
+    /// @param irmAddress The address of the IRM
+    /// @param lltv The LLTV value
+    function set_morpho_part_b(
+        address loanTokenAddress,
+        address collateralTokenAddress,
+        address oracleAddress,
+        address irmAddress,
+        uint256 lltv
+    ) public {
+        marketParams = MarketParams({
+            loanToken: loanTokenAddress,
+            collateralToken: collateralTokenAddress,
+            oracle: oracleAddress,
+            irm: irmAddress,
+            lltv: lltv
+        });
+        morpho.createMarket(marketParams);
+        id = marketParams.id();
+    }
+
     /// @notice Test 1: Simple supply and withdraw (NO CALLBACKS)
     function test_SimpleSupplyWithdraw() public {
         uint256 supplyAmount = 1000 ether;
