@@ -87,21 +87,44 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
-    /// @notice Setup Morpho Part A: Enable IRM and LLTV
+    /// @notice Setup Part A: Initialize contract instances
+    /// @param morphoAddress The address of the deployed Morpho contract
+    /// @param loanTokenAddress The address of the loan token
+    /// @param collateralTokenAddress The address of the collateral token
+    /// @param oracleAddress The address of the oracle
+    /// @param irmAddress The address of the IRM
+    function set_up_part_a(
+        address morphoAddress,
+        address loanTokenAddress,
+        address collateralTokenAddress,
+        address oracleAddress,
+        address irmAddress
+    ) public {
+        morpho = Morpho(morphoAddress);
+        loanToken = ERC20Mock(loanTokenAddress);
+        collateralToken = ERC20Mock(collateralTokenAddress);
+        oracle = OracleMock(oracleAddress);
+        irm = IrmMock(irmAddress);
+
+        // Setup oracle price (1:1)
+        oracle.setPrice(ORACLE_PRICE_SCALE);
+    }
+
+    /// @notice Setup Part B: Enable IRM and LLTV
     /// @param irmAddress The address of the IRM to enable
     /// @param lltv The LLTV value to enable
-    function set_morpho_part_a(address irmAddress, uint256 lltv) public {
+    function set_up_part_b(address irmAddress, uint256 lltv) public {
         morpho.enableIrm(irmAddress);
         morpho.enableLltv(lltv);
     }
 
-    /// @notice Setup Morpho Part B: Create market with given parameters
+    /// @notice Setup Part C: Create market with given parameters
     /// @param loanTokenAddress The address of the loan token
     /// @param collateralTokenAddress The address of the collateral token
     /// @param oracleAddress The address of the oracle
     /// @param irmAddress The address of the IRM
     /// @param lltv The LLTV value
-    function set_morpho_part_b(
+    function set_up_part_c(
         address loanTokenAddress,
         address collateralTokenAddress,
         address oracleAddress,

@@ -94,8 +94,15 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function setUp();
         function test_SimpleSupplyWithdraw();
         function setPrice(uint256 newPrice);
-        function set_morpho_part_a(address irmAddress, uint256 lltv);
-        function set_morpho_part_b(
+        function set_morpho_part_a(
+            address morphoAddress,
+            address loanTokenAddress,
+            address collateralTokenAddress,
+            address oracleAddress,
+            address irmAddress
+        );
+        function set_morpho_part_b(address irmAddress, uint256 lltv);
+        function set_morpho_part_c(
             address loanTokenAddress,
             address collateralTokenAddress,
             address oracleAddress,
