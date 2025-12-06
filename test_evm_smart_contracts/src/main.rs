@@ -91,9 +91,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     client_supplier2.assign(owner_supplier2, chain2).await?;
 
     sol! {
-        function setUp();
         function test_SimpleSupplyWithdraw();
-        function setPrice(uint256 newPrice);
         function set_addresses(
             address ownerAddress,
             address supplierAddress,
@@ -106,11 +104,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function set_up_part_c();
         function set_up_part_d();
         function set_up_part_e();
-
-        // Morpho constructor
-        struct MorphoConstructor {
-            address newOwner;
-        }
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -120,8 +113,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let constructor_argument = Vec::new();
     let evm_instantiation = EvmInstantiation::default();
 
-    // Deploy Morpho with owner parameter
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Deploying Morpho");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Extracting EVM addresses");
     use alloy_primitives::Address;
 
     // Extract EVM addresses from all account owners
@@ -139,26 +131,8 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("address_liquidator: {:?}", address_liquidator);
     println!("address_supplier2: {:?}", address_supplier2);
 
-    let morpho_constructor = MorphoConstructor {
-        newOwner: address_owner,
-    };
-    use alloy_sol_types::SolConstructor;
-    let morpho_constructor_args = morpho_constructor.abi_encode();
-    let morpho_app_id = read_and_publish_contract(
-        &client_regular,
-        &path,
-        "src/Morpho.sol",
-        "Morpho",
-        morpho_constructor_args,
-        evm_instantiation.clone()
-    ).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, morpho_app_id={:?}", morpho_app_id);
-
-    let morpho_address = morpho_app_id.evm_address();
-    println!("morpho_address: {:?}", morpho_address);
-
     // Deploy SimpleNonReentrantTest
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 7 - Deploying test contract (SimpleNonReentrantTest)");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 4 - Deploying test contract (SimpleNonReentrantTest)");
     let test_contract_app_id = read_and_publish_contract(
         &client_regular,
         &path,
@@ -188,9 +162,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let mut node_service_supplier2 = client_supplier2.run_node_service(port_supplier2, ProcessInbox::Skip).await?;
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 8 - Creating application wrappers");
-
-    // Create application wrappers for all deployed contracts
-    let morpho_app = node_service_regular.make_application(&chain2, &morpho_app_id)?;
 
     // Create test contract application wrappers for each user
     let test_contract_regular = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
