@@ -94,7 +94,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function setUp();
         function test_SimpleSupplyWithdraw();
         function setPrice(uint256 newPrice);
-        function deploy_mocks();
         function set_addresses(
             address ownerAddress,
             address supplierAddress,
@@ -203,15 +202,8 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
 
-    // Step 1: Deploy mock contracts
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Deploying mocks");
-    let operation = deploy_mocksCall { };
-    let operation = get_zero_operation(operation)?;
-    test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - Mocks deployed");
-
-    // Step 2: Set user addresses
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Setting user addresses");
+    // Step 1: Set user addresses
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Setting user addresses");
     let operation = set_addressesCall {
         ownerAddress: address_owner,
         supplierAddress: address_supplier,
@@ -221,45 +213,45 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     };
     let operation = get_zero_operation(operation)?;
     test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - User addresses set");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - User addresses set");
 
-    // Step 3: Verify setup (set_up_part_a)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_a");
+    // Step 2: Deploy all contracts and initialize (set_up_part_a)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running set_up_part_a");
     let operation = set_up_part_aCall { };
     let operation = get_zero_operation(operation)?;
-    test_contract_owner.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_a completed");
+    test_contract_regular.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - set_up_part_a completed");
 
-    // Step 4: Enable IRM and LLTV
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - Running set_up_part_b");
+    // Step 3: Enable IRM and LLTV
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_b");
     let operation = set_up_part_bCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_owner.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - set_up_part_b completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_b completed");
 
-    // Step 5: Create market
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - Running set_up_part_c");
+    // Step 4: Create market
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - Running set_up_part_c");
     let operation = set_up_part_cCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - set_up_part_c completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - set_up_part_c completed");
 
-    // Step 6: Approve loan token (for all users)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - Running set_up_part_d for all users");
+    // Step 5: Approve loan token (for all users)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - Running set_up_part_d for all users");
     let operation = set_up_part_dCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_supplier.run_json_query(operation.clone()).await?;
     test_contract_borrower.run_json_query(operation.clone()).await?;
     test_contract_liquidator.run_json_query(operation.clone()).await?;
     test_contract_supplier2.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - set_up_part_d completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - set_up_part_d completed");
 
-    // Step 7: Approve collateral token (for borrower)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - Running set_up_part_e");
+    // Step 6: Approve collateral token (for borrower)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - Running set_up_part_e");
     let operation = set_up_part_eCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_borrower.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - set_up_part_e completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - set_up_part_e completed");
 
 /*
     let operation = test_SimpleSupplyWithdrawCall { };
