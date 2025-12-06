@@ -1,6 +1,7 @@
 use anyhow::Result;
 use alloy_sol_types::sol;
-//use alloy_sol_types::{SolCall, SolValue};
+//use alloy_sol_types::SolCall;
+use alloy_sol_types::SolValue;
 use linera_base::vm::{EvmInstantiation, EvmOperation, EvmQuery};
 use linera_sdk::{
 //    abis::evm::EvmAbi,
@@ -93,6 +94,11 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function setUp();
         function test_SimpleSupplyWithdraw();
         function setPrice(uint256 newPrice);
+
+        // Morpho constructor
+        struct MorphoConstructor {
+            address newOwner;
+        }
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -150,6 +156,45 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     ).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, irm_app_id={:?}", irm_app_id);
 
+    // Create EVM addresses for all deployed contracts
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 6.5 - Creating EVM addresses");
+    use alloy_primitives::Address;
+
+    let loan_token_address = loan_token_app_id.evm_address();
+    let collateral_token_address = collateral_token_app_id.evm_address();
+    let oracle_address = oracle_app_id.evm_address();
+    let irm_address = irm_app_id.evm_address();
+
+    println!("loan_token_address: {:?}", loan_token_address);
+    println!("collateral_token_address: {:?}", collateral_token_address);
+    println!("oracle_address: {:?}", oracle_address);
+    println!("irm_address: {:?}", irm_address);
+
+    // Deploy Morpho with owner parameter
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 6.6 - Deploying Morpho");
+
+    // Extract the owner address from owner_owner
+    let owner_address = owner_owner.to_evm_address().unwrap();
+    println!("owner_address: {:?}", owner_address);
+
+    let morpho_constructor = MorphoConstructor {
+        newOwner: owner_address,
+    };
+    use alloy_sol_types::SolConstructor;
+    let morpho_constructor_args = morpho_constructor.abi_encode();
+    let morpho_app_id = read_and_publish_contract(
+        &client_regular,
+        &path,
+        "src/Morpho.sol",
+        "Morpho",
+        morpho_constructor_args,
+        evm_instantiation.clone()
+    ).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, morpho_app_id={:?}", morpho_app_id);
+
+    let morpho_address = morpho_app_id.evm_address();
+    println!("morpho_address: {:?}", morpho_address);
+
     // Deploy SimpleNonReentrantTest
     println!("test_evm_end_to_end_morpho_not_reentrant, step 7 - Deploying test contract (SimpleNonReentrantTest)");
     let test_contract_app_id = read_and_publish_contract(
@@ -161,6 +206,9 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         evm_instantiation
     ).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, test_contract_app_id={:?}", test_contract_app_id);
+
+    let test_contract_address = test_contract_app_id.evm_address();
+    println!("test_contract_address: {:?}", test_contract_address);
 
     // Create node services for all clients
     let port_regular = get_node_port().await;
@@ -184,6 +232,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let collateral_token_app = node_service_regular.make_application(&chain2, &collateral_token_app_id)?;
     let oracle_app = node_service_regular.make_application(&chain2, &oracle_app_id)?;
     let irm_app = node_service_regular.make_application(&chain2, &irm_app_id)?;
+    let morpho_app = node_service_regular.make_application(&chain2, &morpho_app_id)?;
     let test_contract_app = node_service_regular.make_application(&chain2, &test_contract_app_id)?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
 

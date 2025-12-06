@@ -15,7 +15,7 @@ import {SharesMathLib} from "../src/libraries/SharesMathLib.sol";
 /// @title SimpleNonReentrantTest
 /// @notice Simple, standalone tests demonstrating Morpho Blue WITHOUT callbacks
 /// @dev All functions called with hex"" to ensure NO REENTRANCY
-contract SimpleNonReentrantTest is Test {
+contract SimpleNonReentrantTest {
     using MarketParamsLib for MarketParams;
     using MathLib for uint256;
 
@@ -42,10 +42,10 @@ contract SimpleNonReentrantTest is Test {
 
     function setUp() public {
         // Create users
-        owner = makeAddr("Owner");
-        supplier = makeAddr("Supplier");
-        borrower = makeAddr("Borrower");
-        liquidator = makeAddr("Liquidator");
+//        owner = makeAddr("Owner");
+//        supplier = makeAddr("Supplier");
+//        borrower = makeAddr("Borrower");
+//        liquidator = makeAddr("Liquidator");
 
         // Deploy contracts
         morpho = new Morpho(owner);
@@ -58,10 +58,10 @@ contract SimpleNonReentrantTest is Test {
         oracle.setPrice(ORACLE_PRICE_SCALE);
 
         // Enable IRM and LLTV as owner
-        vm.startPrank(owner);
+//        vm.startPrank(owner);
         morpho.enableIrm(address(irm));
         morpho.enableLltv(LLTV);
-        vm.stopPrank();
+//        vm.stopPrank();
 
         // Create market
         marketParams = MarketParams({
@@ -75,15 +75,15 @@ contract SimpleNonReentrantTest is Test {
         id = marketParams.id();
 
         // Setup approvals
-        vm.prank(supplier);
+//        vm.prank(supplier);
         loanToken.approve(address(morpho), type(uint256).max);
 
-        vm.prank(borrower);
+//        vm.prank(borrower);
         loanToken.approve(address(morpho), type(uint256).max);
-        vm.prank(borrower);
+//        vm.prank(borrower);
         collateralToken.approve(address(morpho), type(uint256).max);
 
-        vm.prank(liquidator);
+//        vm.prank(liquidator);
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
@@ -95,20 +95,20 @@ contract SimpleNonReentrantTest is Test {
         loanToken.setBalance(supplier, supplyAmount);
 
         // Supplier supplies (NO CALLBACK - empty data)
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
 
         // Check market state
         (uint128 totalSupplyAssets, uint128 totalSupplyShares, uint128 totalBorrowAssets, uint128 totalBorrowShares, uint128 lastUpdate, uint128 fee) = morpho.market(id);
-        assertEq(totalSupplyAssets, supplyAmount, "Total supply mismatch");
+        require(totalSupplyAssets == supplyAmount, "Total supply mismatch");
 
         // Withdraw half
         uint256 withdrawAmount = 500 ether;
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.withdraw(marketParams, withdrawAmount, 0, supplier, supplier);
 
         // Verify
-        assertEq(loanToken.balanceOf(supplier), withdrawAmount, "Withdrawal failed");
+        require(loanToken.balanceOf(supplier) == withdrawAmount, "Withdrawal failed");
     }
 
     /// @notice Test 2: Complete borrow/repay cycle (NO CALLBACKS)
@@ -119,31 +119,31 @@ contract SimpleNonReentrantTest is Test {
 
         // Step 1: Supplier provides liquidity
         loanToken.setBalance(supplier, supplyAmount);
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
 
         // Step 2: Borrower supplies collateral (NO CALLBACK)
         collateralToken.setBalance(borrower, collateralAmount);
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.supplyCollateral(marketParams, collateralAmount, borrower, hex"");
 
         // Step 3: Borrower borrows
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.borrow(marketParams, borrowAmount, 0, borrower, borrower);
-        assertEq(loanToken.balanceOf(borrower), borrowAmount, "Borrow failed");
+        require(loanToken.balanceOf(borrower) == borrowAmount, "Borrow failed");
 
         // Step 4: Borrower repays (NO CALLBACK)
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.repay(marketParams, borrowAmount, 0, borrower, hex"");
 
         // Step 5: Borrower withdraws collateral
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.withdrawCollateral(marketParams, collateralAmount, borrower, borrower);
 
         // Verify final state
-        assertEq(collateralToken.balanceOf(borrower), collateralAmount, "Collateral withdrawal failed");
+        require(collateralToken.balanceOf(borrower) == collateralAmount, "Collateral withdrawal failed");
         (,, uint128 totalBorrowAssets,,,) = morpho.market(id);
-        assertEq(totalBorrowAssets, 0, "Debt not fully repaid");
+        require(totalBorrowAssets == 0, "Debt not fully repaid");
     }
 
     /// @notice Test 3: Liquidation (NO CALLBACKS)
@@ -154,14 +154,14 @@ contract SimpleNonReentrantTest is Test {
 
         // Setup position
         loanToken.setBalance(supplier, supplyAmount);
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
 
         collateralToken.setBalance(borrower, collateralAmount);
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.supplyCollateral(marketParams, collateralAmount, borrower, hex"");
 
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.borrow(marketParams, borrowAmount, 0, borrower, borrower);
 
         // Price drops 20% - position becomes unhealthy
@@ -170,7 +170,7 @@ contract SimpleNonReentrantTest is Test {
         // Liquidator liquidates (NO CALLBACK)
         uint256 seizedAssets = 100 ether;
         loanToken.setBalance(liquidator, 1000 ether);
-        vm.prank(liquidator);
+//        vm.prank(liquidator);
         (uint256 seized, uint256 repaid) = morpho.liquidate(
             marketParams,
             borrower,
@@ -179,7 +179,7 @@ contract SimpleNonReentrantTest is Test {
             hex"" // NO CALLBACK
         );
 
-        assertEq(collateralToken.balanceOf(liquidator), seized, "Liquidation failed");
+        require(collateralToken.balanceOf(liquidator) == seized, "Liquidation failed");
     }
 
     /// @notice Test 4: Interest accrual
@@ -190,32 +190,32 @@ contract SimpleNonReentrantTest is Test {
 
         // Setup position
         loanToken.setBalance(supplier, supplyAmount);
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
 
         collateralToken.setBalance(borrower, collateralAmount);
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.supplyCollateral(marketParams, collateralAmount, borrower, hex"");
 
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.borrow(marketParams, borrowAmount, 0, borrower, borrower);
 
         (,, uint128 totalBorrowAssetsBefore,,,) = morpho.market(id);
 
         // Time passes (1 year)
-        vm.warp(block.timestamp + 365 days);
+//        vm.warp(block.timestamp + 365 days);
         morpho.accrueInterest(marketParams);
 
         (,, uint128 totalBorrowAssetsAfter,,,) = morpho.market(id);
 
-        assertGt(totalBorrowAssetsAfter, totalBorrowAssetsBefore, "Interest didn't accrue");
+        require(totalBorrowAssetsAfter > totalBorrowAssetsBefore, "Interest didn't accrue");
         uint256 interest = totalBorrowAssetsAfter - totalBorrowAssetsBefore;
     }
 
     /// @notice Test 5: Multiple suppliers
     function test_MultipleSuppliers() public {
-        address supplier2 = makeAddr("Supplier2");
-        vm.prank(supplier2);
+        address supplier2;// = makeAddr("Supplier2");
+//        vm.prank(supplier2);
         loanToken.approve(address(morpho), type(uint256).max);
 
         uint256 amount1 = 1000 ether;
@@ -223,22 +223,22 @@ contract SimpleNonReentrantTest is Test {
 
         // Supplier 1
         loanToken.setBalance(supplier, amount1);
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, amount1, 0, supplier, hex"");
 
         // Supplier 2
         loanToken.setBalance(supplier2, amount2);
-        vm.prank(supplier2);
+//        vm.prank(supplier2);
         morpho.supply(marketParams, amount2, 0, supplier2, hex"");
 
         (uint128 totalSupplyAssets,,,,,) = morpho.market(id);
-        assertEq(totalSupplyAssets, amount1 + amount2, "Total supply wrong");
+        require(totalSupplyAssets == amount1 + amount2, "Total supply wrong");
 
         // Both can withdraw
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.withdraw(marketParams, amount1, 0, supplier, supplier);
 
-        vm.prank(supplier2);
+//        vm.prank(supplier2);
         morpho.withdraw(marketParams, amount2, 0, supplier2, supplier2);
     }
 
@@ -250,21 +250,21 @@ contract SimpleNonReentrantTest is Test {
 
         // Setup
         loanToken.setBalance(supplier, supplyAmount);
-        vm.prank(supplier);
+//        vm.prank(supplier);
         morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
 
         collateralToken.setBalance(borrower, collateralAmount);
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.supplyCollateral(marketParams, collateralAmount, borrower, hex"");
 
         // Borrow close to max
         uint256 safeBorrow = maxBorrow - 1 ether;
-        vm.prank(borrower);
+//        vm.prank(borrower);
         morpho.borrow(marketParams, safeBorrow, 0, borrower, borrower);
 
         // Try to borrow more - should fail
-        vm.prank(borrower);
-        vm.expectRevert();
+//        vm.prank(borrower);
+//        vm.expectRevert();
         morpho.borrow(marketParams, 2 ether, 0, borrower, borrower);
     }
 }

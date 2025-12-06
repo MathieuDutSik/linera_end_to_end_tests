@@ -7291,6 +7291,7 @@ dependencies = [
 name = "test_morpho_non_reentrant"
 version = "0.1.0"
 dependencies = [
+ "alloy-primitives",
  "alloy-sol-types",
  "anyhow",
  "bcs",
