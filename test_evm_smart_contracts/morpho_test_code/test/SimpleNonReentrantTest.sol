@@ -31,6 +31,7 @@ contract SimpleNonReentrantTest {
     address public supplier;
     address public borrower;
     address public liquidator;
+    address public supplier2;
 
     // Market
     MarketParams public marketParams;
@@ -93,6 +94,26 @@ contract SimpleNonReentrantTest {
         collateralToken = new ERC20Mock();
         oracle = new OracleMock();
         irm = new IrmMock();
+    }
+
+    /// @notice Set user addresses
+    /// @param ownerAddress The address for the owner
+    /// @param supplierAddress The address for the supplier
+    /// @param borrowerAddress The address for the borrower
+    /// @param liquidatorAddress The address for the liquidator
+    /// @param supplier2Address The address for the second supplier
+    function set_addresses(
+        address ownerAddress,
+        address supplierAddress,
+        address borrowerAddress,
+        address liquidatorAddress,
+        address supplier2Address
+    ) public {
+        owner = ownerAddress;
+        supplier = supplierAddress;
+        borrower = borrowerAddress;
+        liquidator = liquidatorAddress;
+        supplier2 = supplier2Address;
     }
 
     /// @notice Setup Part A: Initialize Morpho contract and set oracle price

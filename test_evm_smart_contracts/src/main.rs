@@ -95,6 +95,13 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function test_SimpleSupplyWithdraw();
         function setPrice(uint256 newPrice);
         function deploy_mocks();
+        function set_addresses(
+            address ownerAddress,
+            address supplierAddress,
+            address borrowerAddress,
+            address liquidatorAddress,
+            address supplier2Address
+        );
         function set_up_part_a(address morphoAddress);
         function set_up_part_b();
         function set_up_part_c();
@@ -118,12 +125,23 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 3 - Deploying Morpho");
     use alloy_primitives::Address;
 
-    // Extract the owner address from owner_owner
-    let owner_address = owner_owner.to_evm_address().unwrap();
-    println!("owner_address: {:?}", owner_address);
+    // Extract EVM addresses from all account owners
+    let address_regular = owner_regular.to_evm_address().unwrap();
+    let address_owner = owner_owner.to_evm_address().unwrap();
+    let address_supplier = owner_supplier.to_evm_address().unwrap();
+    let address_borrower = owner_borrower.to_evm_address().unwrap();
+    let address_liquidator = owner_liquidator.to_evm_address().unwrap();
+    let address_supplier2 = owner_supplier2.to_evm_address().unwrap();
+
+    println!("address_regular: {:?}", address_regular);
+    println!("address_owner: {:?}", address_owner);
+    println!("address_supplier: {:?}", address_supplier);
+    println!("address_borrower: {:?}", address_borrower);
+    println!("address_liquidator: {:?}", address_liquidator);
+    println!("address_supplier2: {:?}", address_supplier2);
 
     let morpho_constructor = MorphoConstructor {
-        newOwner: owner_address,
+        newOwner: address_owner,
     };
     use alloy_sol_types::SolConstructor;
     let morpho_constructor_args = morpho_constructor.abi_encode();
@@ -192,43 +210,56 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - Mocks deployed");
 
-    // Step 2: Initialize Morpho and set oracle price
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running set_up_part_a");
+    // Step 2: Set user addresses
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Setting user addresses");
+    let operation = set_addressesCall {
+        ownerAddress: address_owner,
+        supplierAddress: address_supplier,
+        borrowerAddress: address_borrower,
+        liquidatorAddress: address_liquidator,
+        supplier2Address: address_supplier2,
+    };
+    let operation = get_zero_operation(operation)?;
+    test_contract_regular.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - User addresses set");
+
+    // Step 3: Initialize Morpho and set oracle price
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_a");
     let operation = set_up_part_aCall { morphoAddress: morpho_address };
     let operation = get_zero_operation(operation)?;
     test_contract_owner.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - set_up_part_a completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_a completed");
 
-    // Step 3: Enable IRM and LLTV
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - Running set_up_part_b");
+    // Step 4: Enable IRM and LLTV
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - Running set_up_part_b");
     let operation = set_up_part_bCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_owner.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - set_up_part_b completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - set_up_part_b completed");
 
-    // Step 4: Create market
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - Running set_up_part_c");
+    // Step 5: Create market
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - Running set_up_part_c");
     let operation = set_up_part_cCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - set_up_part_c completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - set_up_part_c completed");
 
-    // Step 5: Approve loan token (for all users)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - Running set_up_part_d for all users");
+    // Step 6: Approve loan token (for all users)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - Running set_up_part_d for all users");
     let operation = set_up_part_dCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_supplier.run_json_query(operation.clone()).await?;
     test_contract_borrower.run_json_query(operation.clone()).await?;
     test_contract_liquidator.run_json_query(operation.clone()).await?;
     test_contract_supplier2.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - set_up_part_d completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - set_up_part_d completed");
 
-    // Step 6: Approve collateral token (for borrower)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - Running set_up_part_e");
+    // Step 7: Approve collateral token (for borrower)
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - Running set_up_part_e");
     let operation = set_up_part_eCall { };
     let operation = get_zero_operation(operation)?;
     test_contract_borrower.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - set_up_part_e completed");
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - set_up_part_e completed");
 
 /*
     let operation = test_SimpleSupplyWithdrawCall { };
