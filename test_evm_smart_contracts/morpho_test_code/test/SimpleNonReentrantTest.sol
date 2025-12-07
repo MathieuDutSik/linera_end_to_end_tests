@@ -41,6 +41,9 @@ contract SimpleNonReentrantTest {
     uint256 constant ORACLE_PRICE_SCALE = 1e36;
     uint256 constant LLTV = 0.8 ether; // 80% loan-to-value
 
+    constructor() payable {
+    }
+
     function setUp() public {
         // Create users
 //        owner = makeAddr("Owner");
@@ -88,6 +91,11 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
+    /// @notice Simple test function that returns true
+    function test_ping() public pure returns (bool) {
+        return true;
+    }
+
     /// @notice Set user addresses
     /// @param ownerAddress The address for the owner
     /// @param supplierAddress The address for the supplier
@@ -110,11 +118,15 @@ contract SimpleNonReentrantTest {
 
     /// @notice Setup Part A: Deploy all contracts and initialize
     function set_up_part_a() public {
-        morpho = new Morpho(owner);
-        loanToken = new ERC20Mock();
-        collateralToken = new ERC20Mock();
+//        morpho = new Morpho(owner);
+//        loanToken = new ERC20Mock();
+//        collateralToken = new ERC20Mock();
         oracle = new OracleMock();
-        irm = new IrmMock();
+//        irm = new IrmMock();
+    }
+
+    /// @notice Setup Part A2: Set oracle price
+    function set_up_part_a2() public {
         oracle.setPrice(ORACLE_PRICE_SCALE);
     }
 
