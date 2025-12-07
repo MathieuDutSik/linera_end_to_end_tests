@@ -13,7 +13,10 @@ use std::{
 };
 
 use anyhow::Context;
-use linera_sdk::abis::evm::EvmAbi;
+use linera_sdk::{
+    abis::evm::EvmAbi,
+    linera_base_types::ChainId,
+};
 use linera_base::{
     identifiers::ApplicationId,
     vm::EvmInstantiation,
@@ -29,7 +32,8 @@ use tempfile::TempDir;
 //const LINERA_SOL: &str = include_str!("../solidity/Linera.sol");
 //const LINERA_TYPES_SOL: &str = include_str!("../solidity/LineraTypes.sol");
 
-pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_json::Value, constructor_argument: &Vec<u8>, evm_instantiation: &EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
+
+pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_json::Value, constructor_argument: &Vec<u8>, evm_instantiation: &EvmInstantiation, publisher: Option<ChainId>) -> anyhow::Result<ApplicationId<EvmAbi>> {
     let evm_data = data_contract
         .get("evm")
         .with_context(|| format!("failed to get evm in data_contract={data_contract}"))?;
@@ -51,7 +55,7 @@ pub async fn publish_evm_contract(client: &ClientWrapper, data_contract: &serde_
             constructor_argument,
             evm_instantiation,
             &[],
-            None,
+            publisher,
         )
         .await?)
 }
@@ -87,7 +91,7 @@ pub async fn read_and_publish_contracts(client: &ClientWrapper, path: &PathBuf, 
             let data_contract = contract_block
                 .get(contract_key)
                 .with_context(|| format!("failed to get contract_key={contract_key}"))?;
-            let application_id = publish_evm_contract(client, data_contract, &constructor_argument, &instantiation_argument).await?;
+            let application_id = publish_evm_contract(client, data_contract, &constructor_argument, &instantiation_argument, None).await?;
             println!("contract_key={} contract_name={}", contract_key, contract_name);
             if file_name_key == file_name && contract_key == contract_name {
                 println!("Mathing the test");
@@ -102,7 +106,7 @@ pub async fn read_and_publish_contracts(client: &ClientWrapper, path: &PathBuf, 
 }
 
 
-pub async fn read_and_publish_contract(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, constructor_argument: Vec<u8>, evm_instantiation: EvmInstantiation) -> anyhow::Result<ApplicationId<EvmAbi>> {
+pub async fn read_and_publish_contract(client: &ClientWrapper, path: &PathBuf, file_name: &str, contract_name: &str, constructor_argument: Vec<u8>, evm_instantiation: EvmInstantiation, publisher: Option<ChainId>) -> anyhow::Result<ApplicationId<EvmAbi>> {
     println!("read_bytecode_from_file, path={}", path.display());
     let contents = std::fs::read_to_string(path)?;
     let json_data: serde_json::Value = serde_json::from_str(&contents)?;
@@ -116,7 +120,7 @@ pub async fn read_and_publish_contract(client: &ClientWrapper, path: &PathBuf, f
     let data_contract = contract_block
         .get(contract_name)
         .with_context(|| format!("failed to get contract_name={contract_name}"))?;
-    publish_evm_contract(client, data_contract, &constructor_argument, &evm_instantiation).await
+    publish_evm_contract(client, data_contract, &constructor_argument, &evm_instantiation, publisher).await
 }
 
 

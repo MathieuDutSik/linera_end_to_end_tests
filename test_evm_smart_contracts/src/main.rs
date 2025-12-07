@@ -100,9 +100,10 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         .transfer_with_accounts(Amount::from_tokens(800), account_chain, account1)
         .await?;
 
-    let account2 = Account::chain(chain2);
     assert_eq!(client_regular.local_balance(account_chain).await?, Amount::from_micros(199999990));
     assert_eq!(client_regular.local_balance(account1).await?, Amount::from_tokens(800));
+    assert_eq!(client_regular.query_balance(account_chain).await?, Amount::from_micros(199999990));
+    assert_eq!(client_regular.query_balance(account1).await?, Amount::from_tokens(800));
 
     sol! {
         function test_ping() public pure returns (bool);
@@ -128,7 +129,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
 
     let constructor_argument = Vec::new();
 
-    let start_value = Amount::from_tokens(10);
+    let start_value = Amount::from_tokens(100);
     let evm_instantiation = EvmInstantiation {
         value: start_value.into(),
         argument: vec![],
@@ -159,7 +160,8 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         "SimpleNonReentrantTest.sol",
         "SimpleNonReentrantTest",
         constructor_argument.clone(),
-        evm_instantiation
+        evm_instantiation,
+        Some(chain2),
     ).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, test_contract_app_id={:?}", test_contract_app_id);
 
