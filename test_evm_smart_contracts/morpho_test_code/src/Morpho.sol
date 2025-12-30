@@ -101,7 +101,10 @@ contract Morpho is IMorphoStaticTyping {
     }
 
     /// @inheritdoc IMorphoBase
+//    function enableIrm(address irm) external {
     function enableIrm(address irm) external onlyOwner {
+//        require(msg.sender == owner, ErrorsLib.NOT_OWNER);
+
         require(!isIrmEnabled[irm], ErrorsLib.ALREADY_SET);
 
         isIrmEnabled[irm] = true;

@@ -233,6 +233,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - Running set_up_part_b");
     let operation = set_up_part_bCall { };
     let operation = get_zero_operation(operation)?;
+    node_service_owner.process_inbox(&chain2).await?;
     test_contract_owner.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - set_up_part_b completed");
 
@@ -240,6 +241,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 19 - Running set_up_part_c");
     let operation = set_up_part_cCall { };
     let operation = get_zero_operation(operation)?;
+    node_service_regular.process_inbox(&chain2).await?;
     test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 20 - set_up_part_c completed");
 
@@ -247,6 +249,10 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - Running set_up_part_d for all users");
     let operation = set_up_part_dCall { };
     let operation = get_zero_operation(operation)?;
+    node_service_supplier.process_inbox(&chain2).await?;
+    node_service_borrower.process_inbox(&chain2).await?;
+    node_service_liquidator.process_inbox(&chain2).await?;
+    node_service_supplier2.process_inbox(&chain2).await?;
     test_contract_supplier.run_json_query(operation.clone()).await?;
     test_contract_borrower.run_json_query(operation.clone()).await?;
     test_contract_liquidator.run_json_query(operation.clone()).await?;
@@ -257,6 +263,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - Running set_up_part_e");
     let operation = set_up_part_eCall { };
     let operation = get_zero_operation(operation)?;
+    node_service_borrower.process_inbox(&chain2).await?;
     test_contract_borrower.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 24 - set_up_part_e completed");
 

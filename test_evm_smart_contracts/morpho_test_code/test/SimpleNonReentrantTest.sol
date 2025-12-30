@@ -118,11 +118,11 @@ contract SimpleNonReentrantTest {
 
     /// @notice Setup Part A: Deploy all contracts and initialize
     function set_up_part_a() public {
-//        morpho = new Morpho(owner);
-//        loanToken = new ERC20Mock();
-//        collateralToken = new ERC20Mock();
+        morpho = new Morpho(owner);
+        loanToken = new ERC20Mock();
+        collateralToken = new ERC20Mock();
         oracle = new OracleMock();
-//        irm = new IrmMock();
+        irm = new IrmMock();
     }
 
     /// @notice Setup Part A2: Set oracle price
@@ -132,8 +132,9 @@ contract SimpleNonReentrantTest {
 
     /// @notice Setup Part B: Enable IRM and LLTV
     function set_up_part_b() public {
-        morpho.enableIrm(address(irm));
-        morpho.enableLltv(LLTV);
+        require(msg.sender == owner, "non-coherency of address");
+//        morpho.enableIrm(address(irm));
+//        morpho.enableLltv(LLTV);
     }
 
     /// @notice Setup Part C: Create market with given parameters
