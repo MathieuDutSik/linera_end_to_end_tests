@@ -106,7 +106,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     assert_eq!(client_regular.query_balance(account1).await?, Amount::from_tokens(800));
 
     sol! {
-        function test_ping() public pure returns (bool);
         function test_SimpleSupplyWithdraw();
         function set_addresses(
             address ownerAddress,
@@ -121,6 +120,8 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function set_up_part_c();
         function set_up_part_d();
         function set_up_part_e();
+        function get_irm();
+        function get_morpho();
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -195,13 +196,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 9 - All application wrappers created");
 
-    // Test basic contract interaction first
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 10 - Testing basic contract interaction");
-    let operation = test_pingCall { };
-    let operation = EvmQuery::Query(operation.abi_encode());
-    let result = test_contract_regular.run_json_query(operation).await?;
-    println!("test_ping result: {:?}", result);
-
     // Step 1: Set user addresses
     println!("test_evm_end_to_end_morpho_not_reentrant, step 11 - Setting user addresses");
     let operation = set_addressesCall {
@@ -221,13 +215,6 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let operation = get_zero_operation(operation)?;
     test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - set_up_part_a completed");
-
-    // Step 2.5: Set oracle price (set_up_part_a2)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - Running set_up_part_a2");
-    let operation = set_up_part_a2Call { };
-    let operation = get_zero_operation(operation)?;
-    test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - set_up_part_a2 completed");
 
     // Step 3: Enable IRM and LLTV
     println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - Running set_up_part_b");

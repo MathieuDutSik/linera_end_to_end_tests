@@ -91,11 +91,6 @@ contract SimpleNonReentrantTest {
         loanToken.approve(address(morpho), type(uint256).max);
     }
 
-    /// @notice Simple test function that returns true
-    function test_ping() public pure returns (bool) {
-        return true;
-    }
-
     /// @notice Set user addresses
     /// @param ownerAddress The address for the owner
     /// @param supplierAddress The address for the supplier
@@ -116,6 +111,16 @@ contract SimpleNonReentrantTest {
         supplier2 = supplier2Address;
     }
 
+    function get_irm() public returns (address) {
+        return address(irm);
+    }
+
+    function get_morpho() public returns (address) {
+        return address(morpho);
+    }
+
+
+
     /// @notice Setup Part A: Deploy all contracts and initialize
     function set_up_part_a() public {
         morpho = new Morpho(owner);
@@ -123,10 +128,6 @@ contract SimpleNonReentrantTest {
         collateralToken = new ERC20Mock();
         oracle = new OracleMock();
         irm = new IrmMock();
-    }
-
-    /// @notice Setup Part A2: Set oracle price
-    function set_up_part_a2() public {
         oracle.setPrice(ORACLE_PRICE_SCALE);
     }
 
