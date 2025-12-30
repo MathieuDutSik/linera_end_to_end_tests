@@ -119,7 +119,13 @@ contract SimpleNonReentrantTest {
         return address(morpho);
     }
 
+    function get_loan_token() public returns (address) {
+        return address(loanToken);
+    }
 
+    function get_collateral_token() public returns (address) {
+        return address(collateralToken);
+    }
 
     /// @notice Setup Part A: Deploy all contracts and initialize
     function set_up_part_a() public {
@@ -149,16 +155,6 @@ contract SimpleNonReentrantTest {
         });
         morpho.createMarket(marketParams);
         id = marketParams.id();
-    }
-
-    /// @notice Setup Part D: Approve loan token for Morpho
-    function set_up_part_d() public {
-        loanToken.approve(address(morpho), type(uint256).max);
-    }
-
-    /// @notice Setup Part E: Approve collateral token for Morpho
-    function set_up_part_e() public {
-        collateralToken.approve(address(morpho), type(uint256).max);
     }
 
     /// @notice Test 1: Simple supply and withdraw (NO CALLBACKS)

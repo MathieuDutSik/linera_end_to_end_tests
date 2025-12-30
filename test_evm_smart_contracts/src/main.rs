@@ -123,8 +123,11 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function set_up_part_e();
         function get_irm();
         function get_morpho();
+        function get_loan_token();
+        function get_collateral_token();
         function enableIrm(address irm);
         function enableLltv(uint256 lltv);
+        function approve(address spender, uint256 amount);
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -263,25 +266,40 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
 
     // Step 5: Approve loan token (for all users)
     println!("test_evm_end_to_end_morpho_not_reentrant, step 21 - Running set_up_part_d for all users");
-    let operation = set_up_part_dCall { };
+
+    let query = get_loan_tokenCall { };
+    let query = EvmQuery::Query(query.abi_encode());
+    let loan_token = test_contract_regular.run_json_query(query).await?;
+    let loan_token = read_evm_address_entry(loan_token);
+    let loan_token_id = ApplicationId::from(loan_token).with_abi::<EvmAbi>();
+    let loan_token_supplier = node_service_supplier.make_application(&chain2, &loan_token_id)?;
+    let loan_token_borrower = node_service_borrower.make_application(&chain2, &loan_token_id)?;
+    let loan_token_liquidator = node_service_liquidator.make_application(&chain2, &loan_token_id)?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - getting loan_token and applications");
+
+    let amount = U256::MAX;
+    let operation = approveCall { spender: morpho, amount };
     let operation = get_zero_operation(operation)?;
     node_service_supplier.process_inbox(&chain2).await?;
+    loan_token_supplier.run_json_query(operation.clone()).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - done for supplier");
     node_service_borrower.process_inbox(&chain2).await?;
+    loan_token_borrower.run_json_query(operation.clone()).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - done for borrower");
     node_service_liquidator.process_inbox(&chain2).await?;
-    node_service_supplier2.process_inbox(&chain2).await?;
-    test_contract_supplier.run_json_query(operation.clone()).await?;
-    test_contract_borrower.run_json_query(operation.clone()).await?;
-    test_contract_liquidator.run_json_query(operation.clone()).await?;
-    test_contract_supplier2.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - set_up_part_d completed");
+    loan_token_liquidator.run_json_query(operation.clone()).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - done for liquidator");
 
-    // Step 6: Approve collateral token (for borrower)
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - Running set_up_part_e");
-    let operation = set_up_part_eCall { };
-    let operation = get_zero_operation(operation)?;
+    let query = get_collateral_tokenCall { };
+    let query = EvmQuery::Query(query.abi_encode());
+    let collateral_token = test_contract_regular.run_json_query(query).await?;
+    let collateral_token = read_evm_address_entry(collateral_token);
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - getting collateral_token and applications");
+    let collateral_token_id = ApplicationId::from(collateral_token).with_abi::<EvmAbi>();
+    let collateral_token_borrower = node_service_borrower.make_application(&chain2, &collateral_token_id)?;
     node_service_borrower.process_inbox(&chain2).await?;
-    test_contract_borrower.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 24 - set_up_part_e completed");
+    collateral_token_borrower.run_json_query(operation.clone()).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - done for borrower");
 
 /*
     let operation = test_SimpleSupplyWithdrawCall { };
