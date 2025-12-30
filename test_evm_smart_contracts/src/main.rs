@@ -1,20 +1,21 @@
 use anyhow::Result;
+use alloy_primitives::U256;
 use alloy_sol_types::sol;
 use alloy_sol_types::SolCall;
 //use alloy_primitives::Address;
 //use alloy_sol_types::SolValue;
 use linera_base::vm::{EvmInstantiation, EvmOperation, EvmQuery};
 use linera_sdk::{
-//    abis::evm::EvmAbi,
-    linera_base_types::{Account, Amount},
+    abis::evm::EvmAbi,
+    linera_base_types::{Account, Amount, ApplicationId},
 };
 use std::{
-//    collections::HashMap,
+    str::FromStr,
     path::PathBuf,
 };
 
 mod solidity;
-use solidity::read_and_publish_contract;
+use solidity::{read_evm_address_entry, read_and_publish_contract};
 
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, LocalNetConfig, ProcessInbox, Database},
@@ -122,6 +123,8 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function set_up_part_e();
         function get_irm();
         function get_morpho();
+        function enableIrm(address irm);
+        function enableLltv(uint256 lltv);
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -216,12 +219,38 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     test_contract_regular.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 14 - set_up_part_a completed");
 
-    // Step 3: Enable IRM and LLTV
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - Running set_up_part_b");
-    let operation = set_up_part_bCall { };
+    let query = get_irmCall { };
+    let query = EvmQuery::Query(query.abi_encode());
+    let irm = test_contract_regular.run_json_query(query).await?;
+    let irm = read_evm_address_entry(irm);
+
+    let query = get_morphoCall { };
+    let query = EvmQuery::Query(query.abi_encode());
+    let morpho = test_contract_regular.run_json_query(query).await?;
+    let morpho = read_evm_address_entry(morpho);
+
+    let morpho_id = ApplicationId::from(morpho).with_abi::<EvmAbi>();
+    let morpho_regular = node_service_regular.make_application(&chain2, &morpho_id)?;
+    let morpho_owner = node_service_owner.make_application(&chain2, &morpho_id)?;
+    let morpho_supplier = node_service_supplier.make_application(&chain2, &morpho_id)?;
+    let morpho_borrower = node_service_borrower.make_application(&chain2, &morpho_id)?;
+    let morpho_liquidator = node_service_liquidator.make_application(&chain2, &morpho_id)?;
+    let morpho_supplier2 = node_service_supplier2.make_application(&chain2, &morpho_id)?;
+
+    // Step 3: Enable IRM
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 15 - Running set_up_part_b");
+    let operation = enableIrmCall { irm };
     let operation = get_zero_operation(operation)?;
     node_service_owner.process_inbox(&chain2).await?;
-    test_contract_owner.run_json_query(operation).await?;
+    morpho_owner.run_json_query(operation).await?;
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 16 - set_up_part_b completed");
+
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 17 - Running set_up_part_b");
+    let lltv = U256::from_str("800000000000000000")?;
+    let operation = enableLltvCall { lltv };
+    let operation = get_zero_operation(operation)?;
+    node_service_owner.process_inbox(&chain2).await?;
+    morpho_owner.run_json_query(operation).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 18 - set_up_part_b completed");
 
     // Step 4: Create market

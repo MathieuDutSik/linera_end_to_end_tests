@@ -3,6 +3,7 @@
 
 //! Code for compiling solidity smart contracts for testing purposes.
 
+use alloy_primitives::Address;
 use std::{
 //    fs::File,
     collections::HashMap,
@@ -194,6 +195,23 @@ pub fn read_bytecode_from_file(path: &PathBuf, file_name: &str, contract_name: &
     Ok(hex::decode(&object)?)
 }
 
+pub fn value_to_vec_u8(value: serde_json::Value) -> Vec<u8> {
+    let mut vec: Vec<u8> = Vec::new();
+    for val in value.as_array().unwrap() {
+        let val = val.as_u64().unwrap();
+        let val = val as u8;
+        vec.push(val);
+    }
+    vec
+}
+
+pub fn read_evm_address_entry(value: serde_json::Value) -> Address {
+    let vec = value_to_vec_u8(value);
+    let mut arr = [0_u8; 20];
+    arr.copy_from_slice(&vec[12..]);
+    Address::from_slice(&arr)
+}
+
 /*
 fn get_bytecode_path(path: &Path, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {
     let config_path = path.join("config.json");
@@ -291,18 +309,6 @@ pub fn get_evm_contract_path(path: &str) -> anyhow::Result<(PathBuf, TempDir)> {
 */
 
 /*
-pub fn value_to_vec_u8(value: Value) -> Vec<u8> {
-    let mut vec: Vec<u8> = Vec::new();
-    for val in value.as_array().unwrap() {
-        let val = val.as_u64().unwrap();
-        let val = val as u8;
-        vec.push(val);
-    }
-    vec
-}
-*/
-
-/*
 pub fn read_evm_u64_entry(value: Value) -> u64 {
     let vec = value_to_vec_u8(value);
     let mut arr = [0_u8; 8];
@@ -315,12 +321,5 @@ pub fn read_evm_u64_entry(value: Value) -> u64 {
 pub fn read_evm_u256_entry(value: Value) -> U256 {
     let result = value_to_vec_u8(value);
     U256::from_be_slice(&result)
-}
-
-pub fn read_evm_address_entry(value: Value) -> Address {
-    let vec = value_to_vec_u8(value);
-    let mut arr = [0_u8; 20];
-    arr.copy_from_slice(&vec[12..]);
-    Address::from_slice(&arr)
 }
 */
