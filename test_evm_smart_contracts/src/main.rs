@@ -1,9 +1,7 @@
 use anyhow::Result;
-use alloy_primitives::U256;
+use alloy_primitives::{U256, Address};
 use alloy_sol_types::sol;
 use alloy_sol_types::SolCall;
-//use alloy_primitives::Address;
-//use alloy_sol_types::SolValue;
 use linera_base::vm::{EvmInstantiation, EvmOperation, EvmQuery};
 use linera_sdk::{
     abis::evm::EvmAbi,
@@ -23,6 +21,14 @@ use linera_service::cli_wrappers::{
 };
 use std::env;
 
+#[derive(Debug, Clone)]
+struct MarketParams {
+    loan_token: Address,
+    collateral_token: Address,
+    oracle: Address,
+    irm: Address,
+    lltv: U256,
+}
 
 fn get_zero_operation(operation: impl alloy_sol_types::SolCall) -> Result<EvmQuery, bcs::Error> {
     let operation = EvmOperation::new(Amount::ZERO, operation.abi_encode());
@@ -37,7 +43,7 @@ fn get_config() -> LocalNetConfig {
 }
 
 
-async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
+async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt::init();
     let config = get_config();
@@ -122,12 +128,14 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
         function set_up_part_d();
         function set_up_part_e();
         function get_irm();
+        function get_oracle();
         function get_morpho();
         function get_loan_token();
         function get_collateral_token();
         function enableIrm(address irm);
         function enableLltv(uint256 lltv);
         function approve(address spender, uint256 amount);
+        function setBalance(address owner, uint256 amount);
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -227,6 +235,11 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let irm = test_contract_regular.run_json_query(query).await?;
     let irm = read_evm_address_entry(irm);
 
+    let query = get_oracleCall { };
+    let query = EvmQuery::Query(query.abi_encode());
+    let oracle = test_contract_regular.run_json_query(query).await?;
+    let oracle = read_evm_address_entry(oracle);
+
     let query = get_morphoCall { };
     let query = EvmQuery::Query(query.abi_encode());
     let morpho = test_contract_regular.run_json_query(query).await?;
@@ -275,6 +288,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     let loan_token_supplier = node_service_supplier.make_application(&chain2, &loan_token_id)?;
     let loan_token_borrower = node_service_borrower.make_application(&chain2, &loan_token_id)?;
     let loan_token_liquidator = node_service_liquidator.make_application(&chain2, &loan_token_id)?;
+    let loan_token_regular = node_service_regular.make_application(&chain2, &loan_token_id)?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 22 - getting loan_token and applications");
 
     let amount = U256::MAX;
@@ -301,13 +315,26 @@ async fn test_evm_end_to_end_morpho_not_reentrant() -> Result<()> {
     collateral_token_borrower.run_json_query(operation.clone()).await?;
     println!("test_evm_end_to_end_morpho_not_reentrant, step 23 - done for borrower");
 
-/*
-    let operation = test_SimpleSupplyWithdrawCall { };
-    let operation = get_zero_operation(operation)?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 12 - Running test_SimpleSupplyWithdraw");
-    test_contract_regular.run_json_query(operation).await?;
-    println!("test_evm_end_to_end_morpho_not_reentrant, step 13 - test_SimpleSupplyWithdraw completed");
-*/
+    // Construct MarketParams
+    let market_params = MarketParams {
+        loan_token,
+        collateral_token,
+        oracle,
+        irm,
+        lltv,
+    };
+    println!("test_evm_end_to_end_morpho_not_reentrant, step 24 - MarketParams constructed: {:?}", market_params);
+
+    if choice == 0 {
+        // Testing test_SimpleSupplyWithdraw
+        let supply_amount = U256::from_str("1000000000000000000000").unwrap();
+        let operation = setBalanceCall { owner: address_supplier, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+    }
+
+
     node_service_regular.ensure_is_running()?;
     node_service_owner.ensure_is_running()?;
     node_service_supplier.ensure_is_running()?;
@@ -337,7 +364,7 @@ async fn main() -> Result<()> {
     match test_name.as_str() {
         "morpho_not_reentrant" => {
             println!("Running EVM counter test...");
-            test_evm_end_to_end_morpho_not_reentrant().await?;
+            test_evm_end_to_end_morpho_not_reentrant(0).await?;
         }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);

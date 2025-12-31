@@ -46,10 +46,6 @@ contract SimpleNonReentrantTest {
 
     function setUp() public {
         // Create users
-//        owner = makeAddr("Owner");
-//        supplier = makeAddr("Supplier");
-//        borrower = makeAddr("Borrower");
-//        liquidator = makeAddr("Liquidator");
 
         // Deploy contracts
         morpho = new Morpho(owner);
@@ -113,6 +109,10 @@ contract SimpleNonReentrantTest {
 
     function get_irm() public returns (address) {
         return address(irm);
+    }
+
+    function get_oracle() public returns (address) {
+        return address(oracle);
     }
 
     function get_morpho() public returns (address) {
