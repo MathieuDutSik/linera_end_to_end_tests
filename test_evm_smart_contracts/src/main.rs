@@ -1010,6 +1010,103 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
         println!("test_evm_end_to_end_morpho_not_reentrant, step 97 - Supplier 2 balance verified: {}", balance_supplier2);
     }
 
+    if choice == 5 {
+        // Test 6: Maximum borrow capacity
+        let supply_amount = U256::from_str("10000000000000000000000")?; // 10000 ether
+        let collateral_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+        let lltv = U256::from_str("800000000000000000")?; // 0.8 ether (80%)
+        let one_ether = U256::from_str("1000000000000000000")?;
+
+        // Calculate max borrow: (collateralAmount * LLTV) / 1 ether = 800 tokens
+        let max_borrow = (collateral_amount * lltv) / one_ether;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 98 - Max borrow: {}", max_borrow);
+
+        // Step 1: Supplier provides liquidity
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 99 - Setting balance for supplier");
+        let operation = setBalanceCall { owner: address_supplier, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 100 - Balance set for supplier");
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 101 - Supplier supplying");
+        let market_params_sol = MarketParams {
+            loanToken: market_params.loan_token,
+            collateralToken: market_params.collateral_token,
+            oracle: market_params.oracle,
+            irm: market_params.irm,
+            lltv: market_params.lltv,
+        };
+        let operation = supplyCall {
+            marketParams: market_params_sol.clone(),
+            assets: supply_amount,
+            shares: U256::ZERO,
+            onBehalf: address_supplier,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_supplier.process_inbox(&chain2).await?;
+        morpho_supplier.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 102 - Supplier supplied");
+
+        // Step 2: Borrower supplies collateral
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 103 - Setting collateral balance for borrower");
+        let operation = setBalanceCall { owner: address_borrower, amount: collateral_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        collateral_token_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 104 - Collateral balance set for borrower");
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 105 - Borrower supplying collateral");
+        let operation = supplyCollateralCall {
+            marketParams: market_params_sol.clone(),
+            assets: collateral_amount,
+            onBehalf: address_borrower,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 106 - Borrower supplied collateral");
+
+        // Step 3: Borrow close to max (maxBorrow - 1 ether)
+        let safe_borrow = max_borrow - one_ether;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 107 - Borrower borrowing safe amount: {}", safe_borrow);
+        let operation = borrowCall {
+            marketParams: market_params_sol.clone(),
+            assets: safe_borrow,
+            shares: U256::ZERO,
+            onBehalf: address_borrower,
+            receiver: address_borrower,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 108 - Safe borrow succeeded");
+
+        // Step 4: Try to borrow more - should fail
+        let excess_borrow = U256::from_str("2000000000000000000")?; // 2 ether
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 109 - Attempting to borrow excess amount: {}", excess_borrow);
+        let operation = borrowCall {
+            marketParams: market_params_sol.clone(),
+            assets: excess_borrow,
+            shares: U256::ZERO,
+            onBehalf: address_borrower,
+            receiver: address_borrower,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+
+        // This should fail - we expect an error
+        let result = morpho_borrower.run_json_query(operation).await;
+        if result.is_err() {
+            println!("test_evm_end_to_end_morpho_not_reentrant, step 110 - Excess borrow correctly failed (as expected)");
+        } else {
+            // If it didn't fail, that's a test failure
+            panic!("Expected borrow to fail when exceeding max capacity, but it succeeded");
+        }
+    }
+
 
     node_service_regular.ensure_is_running()?;
     node_service_owner.ensure_is_running()?;
@@ -1031,7 +1128,7 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         eprintln!("Error: No test specified");
         eprintln!("Usage: {} <test-name>", args[0]);
-        eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, all");
+        eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, all");
         std::process::exit(1);
     }
 
@@ -1058,9 +1155,13 @@ async fn main() -> Result<()> {
             println!("Running Morpho multiple suppliers test...");
             test_evm_end_to_end_morpho_not_reentrant(4).await?;
         }
+        "morpho_max_borrow" => {
+            println!("Running Morpho max borrow capacity test...");
+            test_evm_end_to_end_morpho_not_reentrant(5).await?;
+        }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);
-            eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, all");
+            eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, all");
             std::process::exit(1);
         }
     }
