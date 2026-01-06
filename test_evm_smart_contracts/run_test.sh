@@ -35,6 +35,7 @@ ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy
 
 echo "Running some EVM tests..."
 #cargo run evm-counter
-cargo run morpho_not_reentrant > res 2>&1
+#cargo run morpho_not_reentrant > res 2>&1
+cargo run --bin test_morpho_non_reentrant -- morpho_supply_collateral_callback > res 2>&1
 
 echo "EVM test completed successfully!"

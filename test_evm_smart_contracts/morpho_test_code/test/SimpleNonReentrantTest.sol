@@ -41,6 +41,12 @@ contract SimpleNonReentrantTest {
     uint256 constant ORACLE_PRICE_SCALE = 1e36;
     uint256 constant LLTV = 0.8 ether; // 80% loan-to-value
 
+    // Callback state
+    bool public supplyCallbackTriggered;
+    bool public repayCallbackTriggered;
+    bool public supplyCollateralCallbackTriggered;
+    bool public liquidateCallbackTriggered;
+
     constructor() payable {
     }
 
@@ -330,4 +336,202 @@ contract SimpleNonReentrantTest {
 //        vm.expectRevert();
         morpho.borrow(marketParams, 2 ether, 0, borrower, borrower);
     }
+
+    // ========== CALLBACK FUNCTIONS ==========
+
+    /// @notice Callback for supply operations
+    function onMorphoSupply(uint256 amount, bytes calldata /* data */) external {
+        require(msg.sender == address(morpho), "Only Morpho can call");
+        supplyCallbackTriggered = true;
+        // Approve the tokens during callback
+        loanToken.approve(address(morpho), amount);
+    }
+
+    /// @notice Callback for supply collateral operations
+    function onMorphoSupplyCollateral(uint256 amount, bytes calldata /* data */) external {
+        require(msg.sender == address(morpho), "Only Morpho can call");
+        supplyCollateralCallbackTriggered = true;
+        // Approve the tokens during callback
+        collateralToken.approve(address(morpho), amount);
+    }
+
+    /// @notice Callback for repay operations
+    function onMorphoRepay(uint256 amount, bytes calldata /* data */) external {
+        require(msg.sender == address(morpho), "Only Morpho can call");
+        repayCallbackTriggered = true;
+        // Approve the tokens during callback
+        loanToken.approve(address(morpho), amount);
+    }
+
+    /// @notice Callback for liquidate operations
+    function onMorphoLiquidate(uint256 repaid, bytes calldata /* data */) external {
+        require(msg.sender == address(morpho), "Only Morpho can call");
+        liquidateCallbackTriggered = true;
+        // Approve the tokens during callback
+        loanToken.approve(address(morpho), repaid);
+    }
+
+    // ========== REENTRANT TESTS ==========
+
+    /// @notice Reset callback flags
+    function resetCallbackFlags() public {
+        supplyCallbackTriggered = false;
+        repayCallbackTriggered = false;
+        supplyCollateralCallbackTriggered = false;
+        liquidateCallbackTriggered = false;
+    }
+
+    /// @notice Test 7: Supply with callback (reentrant)
+    function test_SupplyWithCallback() public {
+        uint256 supplyAmount = 1000 ether;
+
+        // Give this contract tokens
+        loanToken.setBalance(address(this), supplyAmount);
+
+        // Don't approve - the callback will approve
+        loanToken.approve(address(morpho), 0);
+
+        // Reset flags
+        resetCallbackFlags();
+
+        // Supply with callback data (this will trigger onMorphoSupply)
+        morpho.supply(marketParams, supplyAmount, 0, address(this), abi.encode("supply_callback"));
+
+        // Verify callback was triggered
+        require(supplyCallbackTriggered, "Supply callback not triggered");
+
+        // Verify supply succeeded
+        (uint128 totalSupplyAssets,,,,,) = morpho.market(id);
+        require(totalSupplyAssets == supplyAmount, "Supply amount mismatch");
+    }
+
+    /// @notice Test 8: Supply collateral with callback (reentrant)
+    function test_SupplyCollateralWithCallback() public {
+        uint256 collateralAmount = 1000 ether;
+
+        // Give this contract tokens
+        collateralToken.setBalance(address(this), collateralAmount);
+
+        // Don't approve - the callback will approve
+        collateralToken.approve(address(morpho), 0);
+
+        // Reset flags
+        resetCallbackFlags();
+
+        // Supply collateral with callback data
+        morpho.supplyCollateral(marketParams, collateralAmount, address(this), abi.encode("supply_collateral_callback"));
+
+        // Verify callback was triggered
+        require(supplyCollateralCallbackTriggered, "Supply collateral callback not triggered");
+    }
+
+    /// @notice Test 9: Repay with callback (reentrant)
+    function test_RepayWithCallback() public {
+        uint256 supplyAmount = 10000 ether;
+        uint256 collateralAmount = 1000 ether;
+        uint256 borrowAmount = 600 ether;
+
+        // Step 1: Setup - supplier provides liquidity
+        loanToken.setBalance(supplier, supplyAmount);
+        morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
+
+        // Step 2: This contract supplies collateral and borrows
+        collateralToken.setBalance(address(this), collateralAmount);
+        morpho.supplyCollateral(marketParams, collateralAmount, address(this), hex"");
+        morpho.borrow(marketParams, borrowAmount, 0, address(this), address(this));
+
+        // Step 3: Repay with callback
+        // Don't approve - the callback will approve
+        loanToken.approve(address(morpho), 0);
+
+        // Reset flags
+        resetCallbackFlags();
+
+        // Repay with callback data
+        morpho.repay(marketParams, borrowAmount, 0, address(this), abi.encode("repay_callback"));
+
+        // Verify callback was triggered
+        require(repayCallbackTriggered, "Repay callback not triggered");
+
+        // Verify debt is repaid
+        (,, uint128 totalBorrowAssets,,,) = morpho.market(id);
+        require(totalBorrowAssets == 0, "Debt not fully repaid");
+    }
+
+    /// @notice Test 10: Liquidate with callback (reentrant)
+    function test_LiquidateWithCallback() public {
+        uint256 supplyAmount = 10000 ether;
+        uint256 collateralAmount = 1000 ether;
+        uint256 borrowAmount = 700 ether;
+
+        // Step 1: Setup position
+        loanToken.setBalance(supplier, supplyAmount);
+        morpho.supply(marketParams, supplyAmount, 0, supplier, hex"");
+
+        collateralToken.setBalance(borrower, collateralAmount);
+        morpho.supplyCollateral(marketParams, collateralAmount, borrower, hex"");
+        morpho.borrow(marketParams, borrowAmount, 0, borrower, borrower);
+
+        // Step 2: Price drops - position becomes unhealthy
+        oracle.setPrice(ORACLE_PRICE_SCALE * 80 / 100);
+
+        // Step 3: This contract liquidates with callback
+        uint256 seizedAssets = 100 ether;
+        loanToken.setBalance(address(this), 1000 ether);
+
+        // Don't approve - the callback will approve
+        loanToken.approve(address(morpho), 0);
+
+        // Reset flags
+        resetCallbackFlags();
+
+        // Liquidate with callback data
+        morpho.liquidate(marketParams, borrower, seizedAssets, 0, abi.encode("liquidate_callback"));
+
+        // Verify callback was triggered
+        require(liquidateCallbackTriggered, "Liquidate callback not triggered");
+    }
+
+    /// @notice Wrapper functions to call Morpho with callbacks from Rust tests
+
+    /// @notice Set loan token approval
+    function setLoanTokenApproval(uint256 amount) public {
+        loanToken.approve(address(morpho), amount);
+    }
+
+    /// @notice Set collateral token approval
+    function setCollateralTokenApproval(uint256 amount) public {
+        collateralToken.approve(address(morpho), amount);
+    }
+
+    /// @notice Call supply with callback
+    function callSupplyWithCallback(uint256 amount, bytes memory data) public {
+        morpho.supply(marketParams, amount, 0, address(this), data);
+    }
+
+    /// @notice Call supplyCollateral without callback
+    function callSupplyCollateral(uint256 amount) public {
+        morpho.supplyCollateral(marketParams, amount, address(this), hex"");
+    }
+
+    /// @notice Call supplyCollateral with callback
+    function callSupplyCollateralWithCallback(uint256 amount, bytes memory data) public {
+        morpho.supplyCollateral(marketParams, amount, address(this), data);
+    }
+
+    /// @notice Call borrow without callback
+    function callBorrow(uint256 amount) public {
+        morpho.borrow(marketParams, amount, 0, address(this), address(this));
+    }
+
+    /// @notice Call repay with callback
+    function callRepayWithCallback(uint256 amount, bytes memory data) public {
+        morpho.repay(marketParams, amount, 0, address(this), data);
+    }
+
+    /// @notice Call liquidate with callback
+    function callLiquidateWithCallback(address borrowerAddr, uint256 seizedAssets, bytes memory data) public {
+        morpho.liquidate(marketParams, borrowerAddr, seizedAssets, 0, data);
+    }
 }
+

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use alloy_primitives::{U256, Address};
 use alloy_sol_types::sol;
-use alloy_sol_types::SolCall;
+use alloy_sol_types::{SolCall, SolType};
 use linera_base::vm::{EvmInstantiation, EvmOperation, EvmQuery};
 use linera_sdk::{
     abis::evm::EvmAbi,
@@ -13,7 +13,7 @@ use std::{
 };
 
 mod solidity;
-use solidity::{read_evm_address_entry, read_and_publish_contract};
+use solidity::{read_evm_address_entry, read_evm_bool_entry, read_and_publish_contract};
 
 use linera_service::cli_wrappers::{
     local_net::{get_node_port, LocalNetConfig, ProcessInbox, Database},
@@ -242,6 +242,19 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
             bytes data
         ) external returns (uint256, uint256);
         function accrueInterest(MarketParams marketParams) external;
+        function resetCallbackFlags();
+        function supplyCallbackTriggered() external view returns (bool);
+        function repayCallbackTriggered() external view returns (bool);
+        function supplyCollateralCallbackTriggered() external view returns (bool);
+        function liquidateCallbackTriggered() external view returns (bool);
+        function setLoanTokenApproval(uint256 amount);
+        function setCollateralTokenApproval(uint256 amount);
+        function callSupplyWithCallback(uint256 amount, bytes data);
+        function callSupplyCollateral(uint256 amount);
+        function callSupplyCollateralWithCallback(uint256 amount, bytes data);
+        function callBorrow(uint256 amount);
+        function callRepayWithCallback(uint256 amount, bytes data);
+        function callLiquidateWithCallback(address borrowerAddr, uint256 seizedAssets, bytes data);
     }
 
     println!("test_evm_end_to_end_morpho_not_reentrant, step 1 - Deploying contracts");
@@ -1107,6 +1120,374 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
         }
     }
 
+    if choice == 6 {
+        // Test 7: Supply with callback (reentrant)
+        use alloy_sol_types::sol_data;
+        let supply_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+
+        // Step 1: Give test contract tokens
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 111 - Setting balance for test contract");
+        let operation = setBalanceCall { owner: test_contract_address, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 112 - Balance set for test contract");
+
+        // Step 1b: Set approval to 0 (callback will approve)
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 112b - Setting loan token approval to 0");
+        let operation = setLoanTokenApprovalCall { amount: U256::ZERO };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 112c - Loan token approval set to 0");
+
+        // Step 2: Reset callback flags
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 113 - Resetting callback flags");
+        let operation = resetCallbackFlagsCall { };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 114 - Callback flags reset");
+
+        // Step 3: Supply with callback data (this will trigger onMorphoSupply)
+        // Encode callback data: abi.encode("supply_callback")
+        let callback_data = sol_data::String::abi_encode(&"supply_callback".to_string());
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 115 - Calling supply with callback");
+        let operation = callSupplyWithCallbackCall {
+            amount: supply_amount,
+            data: callback_data.into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 116 - Supply with callback completed");
+
+        // Step 4: Verify callback was triggered
+        let query = supplyCallbackTriggeredCall { };
+        let query = EvmQuery::Query(query.abi_encode());
+        let callback_result = test_contract_regular.run_json_query(query).await?;
+        // Parse boolean from result
+        let callback_triggered = read_evm_bool_entry(callback_result);
+        assert!(callback_triggered, "Supply callback not triggered");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 117 - Verified callback was triggered");
+
+        // Step 5: Verify supply succeeded
+        let market_id = parse_bytes32_from_array(&test_contract_regular.run_json_query(
+            EvmQuery::Query(idCall { }.abi_encode())
+        ).await?)?;
+
+        node_service_regular.process_inbox(&chain2).await?;
+        let market_state = morpho_regular.run_json_query(
+            EvmQuery::Query(marketCall { id: market_id.into() }.abi_encode())
+        ).await?;
+
+        let total_supply_assets = parse_u128_from_array_at_offset(&market_state, 0)?;
+        let total_supply_assets_u256 = U256::from(total_supply_assets);
+        assert_eq!(total_supply_assets_u256, supply_amount, "Supply amount mismatch");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 118 - Supply amount verified");
+    }
+
+    if choice == 7 {
+        // Test 8: Supply collateral with callback (reentrant)
+        use alloy_sol_types::sol_data;
+        let collateral_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+
+        // Step 1: Give test contract collateral tokens
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 119 - Setting collateral balance for test contract");
+        let operation = setBalanceCall { owner: test_contract_address, amount: collateral_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        let collateral_token_regular = node_service_regular.make_application(&chain2, &collateral_token_id)?;
+        collateral_token_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 120 - Collateral balance set for test contract");
+
+        // Step 2: Reset callback flags
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 121 - Resetting callback flags");
+        let operation = resetCallbackFlagsCall { };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 122 - Callback flags reset");
+
+        // Step 3: Supply collateral with callback data
+        let callback_data = sol_data::String::abi_encode(&"supply_collateral_callback".to_string());
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 123 - Calling supplyCollateral with callback");
+        let operation = callSupplyCollateralWithCallbackCall {
+            amount: collateral_amount,
+            data: callback_data.into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 124 - Supply collateral with callback completed");
+
+        // Step 4: Verify callback was triggered
+        let query = supplyCollateralCallbackTriggeredCall { };
+        let query = EvmQuery::Query(query.abi_encode());
+        let callback_result = test_contract_regular.run_json_query(query).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 125 - After the run, callback_result={callback_result:?}");
+        let callback_triggered = read_evm_bool_entry(callback_result);
+
+        assert!(callback_triggered, "Supply collateral callback not triggered");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 126 - Verified supply collateral callback was triggered");
+    }
+
+    if choice == 8 {
+        // Test 9: Repay with callback (reentrant)
+        use alloy_sol_types::sol_data;
+        let supply_amount = U256::from_str("10000000000000000000000")?; // 10000 ether
+        let collateral_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+        let borrow_amount = U256::from_str("600000000000000000000")?; // 600 ether
+
+        let market_params_sol = MarketParams {
+            loanToken: market_params.loan_token,
+            collateralToken: market_params.collateral_token,
+            oracle: market_params.oracle,
+            irm: market_params.irm,
+            lltv: market_params.lltv,
+        };
+
+        // Step 1: Setup - supplier provides liquidity
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 126 - Setting balance for supplier");
+        let operation = setBalanceCall { owner: address_supplier, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 127 - Supplier providing liquidity");
+        let operation = supplyCall {
+            marketParams: market_params_sol.clone(),
+            assets: supply_amount,
+            shares: U256::ZERO,
+            onBehalf: address_supplier,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_supplier.process_inbox(&chain2).await?;
+        morpho_supplier.run_json_query(operation).await?;
+
+        // Step 2: Test contract supplies collateral and borrows
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 128 - Setting collateral balance for test contract");
+        let operation = setBalanceCall { owner: test_contract_address, amount: collateral_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        let collateral_token_regular = node_service_regular.make_application(&chain2, &collateral_token_id)?;
+        collateral_token_regular.run_json_query(operation).await?;
+
+        // Step 2b: Approve collateral tokens to Morpho
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 128b - Approving collateral tokens to Morpho");
+        let operation = setCollateralTokenApprovalCall { amount: U256::MAX };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 128c - Collateral tokens approved");
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 129 - Test contract supplying collateral");
+        let operation = callSupplyCollateralCall {
+            amount: collateral_amount,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 130 - Test contract borrowing");
+        let operation = callBorrowCall {
+            amount: borrow_amount,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+
+        // Step 2c: Check test contract balance after borrowing
+        node_service_regular.process_inbox(&chain2).await?;
+        let query = balanceOfCall { owner: test_contract_address };
+        let query = EvmQuery::Query(query.abi_encode());
+        let test_balance = parse_u256_from_array(&loan_token_regular.run_json_query(query).await?)?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, Test contract loan token balance after borrow: {}", test_balance);
+
+        // Step 3: Set approval to 0 (callback will approve)
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 130c - Setting loan token approval to 0");
+        let operation = setLoanTokenApprovalCall { amount: U256::ZERO };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 130d - Loan token approval set to 0");
+
+        // Step 4: Reset callback flags
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 131 - Resetting callback flags");
+        let operation = resetCallbackFlagsCall { };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+
+        // Step 5: Check debt before repaying
+        let market_id_before = parse_bytes32_from_array(&test_contract_regular.run_json_query(
+            EvmQuery::Query(idCall { }.abi_encode())
+        ).await?)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        let market_state_before = morpho_regular.run_json_query(
+            EvmQuery::Query(marketCall { id: market_id_before.into() }.abi_encode())
+        ).await?;
+        let total_borrow_before = parse_u128_from_array_at_offset(&market_state_before, 64)?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, Total borrow assets BEFORE repay: {}", total_borrow_before);
+
+        // Step 6: Repay with callback data
+        let callback_data = sol_data::String::abi_encode(&"repay_callback".to_string());
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 132 - Calling repay with callback");
+        let operation = callRepayWithCallbackCall {
+            amount: borrow_amount,
+            data: callback_data.into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 133 - Repay with callback completed");
+
+        // Step 6: Verify callback was triggered
+        let query = repayCallbackTriggeredCall { };
+        let query = EvmQuery::Query(query.abi_encode());
+        let callback_result = test_contract_regular.run_json_query(query).await?;
+        let callback_triggered = read_evm_bool_entry(callback_result);
+        assert!(callback_triggered, "Repay callback not triggered");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 134 - Verified repay callback was triggered");
+
+        // Step 7: Verify debt is repaid
+        let market_id = parse_bytes32_from_array(&test_contract_regular.run_json_query(
+            EvmQuery::Query(idCall { }.abi_encode())
+        ).await?)?;
+
+        node_service_regular.process_inbox(&chain2).await?;
+        let market_state = morpho_regular.run_json_query(
+            EvmQuery::Query(marketCall { id: market_id.into() }.abi_encode())
+        ).await?;
+
+        // totalBorrowAssets is the 3rd uint128 (offset 64 bytes)
+        let total_borrow_assets = parse_u128_from_array_at_offset(&market_state, 64)?;
+        assert_eq!(total_borrow_assets, 0, "Debt not fully repaid");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 135 - Debt repayment verified");
+    }
+
+    if choice == 9 {
+        // Test 10: Liquidate with callback (reentrant)
+        use alloy_sol_types::sol_data;
+        let supply_amount = U256::from_str("10000000000000000000000")?; // 10000 ether
+        let collateral_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+        let borrow_amount = U256::from_str("700000000000000000000")?; // 700 ether
+
+        let market_params_sol = MarketParams {
+            loanToken: market_params.loan_token,
+            collateralToken: market_params.collateral_token,
+            oracle: market_params.oracle,
+            irm: market_params.irm,
+            lltv: market_params.lltv,
+        };
+
+        // Step 1: Setup position - Supplier provides liquidity
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 136 - Setting balance for supplier");
+        let operation = setBalanceCall { owner: address_supplier, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 137 - Supplier providing liquidity");
+        let operation = supplyCall {
+            marketParams: market_params_sol.clone(),
+            assets: supply_amount,
+            shares: U256::ZERO,
+            onBehalf: address_supplier,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_supplier.process_inbox(&chain2).await?;
+        morpho_supplier.run_json_query(operation).await?;
+
+        // Step 2: Borrower supplies collateral and borrows
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 138 - Setting collateral balance for borrower");
+        let operation = setBalanceCall { owner: address_borrower, amount: collateral_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        let collateral_token_regular = node_service_regular.make_application(&chain2, &collateral_token_id)?;
+        collateral_token_regular.run_json_query(operation).await?;
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 139 - Borrower supplying collateral");
+        let operation = supplyCollateralCall {
+            marketParams: market_params_sol.clone(),
+            assets: collateral_amount,
+            onBehalf: address_borrower,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 140 - Borrower borrowing");
+        let operation = borrowCall {
+            marketParams: market_params_sol.clone(),
+            assets: borrow_amount,
+            shares: U256::ZERO,
+            onBehalf: address_borrower,
+            receiver: address_borrower,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+
+        // Step 3: Price drops 20% - position becomes unhealthy
+        let oracle_price_scale = U256::from_str("1000000000000000000000000000000000000")?; // 1e36
+        let new_price = oracle_price_scale * U256::from(80) / U256::from(100);
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 141 - Setting oracle price to 80%");
+
+        let oracle_id = ApplicationId::from(oracle).with_abi::<EvmAbi>();
+        let oracle_regular = node_service_regular.make_application(&chain2, &oracle_id)?;
+
+        let operation = setPriceCall { price: new_price };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        oracle_regular.run_json_query(operation).await?;
+
+        // Step 4: Test contract liquidates with callback
+        let seized_assets = U256::from_str("100000000000000000000")?; // 100 ether
+        let test_contract_balance = U256::from_str("1000000000000000000000")?; // 1000 ether
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 142 - Setting balance for test contract");
+        let operation = setBalanceCall { owner: test_contract_address, amount: test_contract_balance };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+
+        // Step 5: Reset callback flags
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 143 - Resetting callback flags");
+        let operation = resetCallbackFlagsCall { };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+
+        // Step 6: Liquidate with callback data
+        let callback_data = sol_data::String::abi_encode(&"liquidate_callback".to_string());
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 144 - Calling liquidate with callback");
+        let operation = callLiquidateWithCallbackCall {
+            borrowerAddr: address_borrower,
+            seizedAssets: seized_assets,
+            data: callback_data.into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        test_contract_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 145 - Liquidate with callback completed");
+
+        // Step 7: Verify callback was triggered
+        let query = liquidateCallbackTriggeredCall { };
+        let query = EvmQuery::Query(query.abi_encode());
+        let callback_result = test_contract_regular.run_json_query(query).await?;
+        let callback_triggered = read_evm_bool_entry(callback_result);
+        assert!(callback_triggered, "Liquidate callback not triggered");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 146 - Verified liquidate callback was triggered");
+    }
+
 
     node_service_regular.ensure_is_running()?;
     node_service_owner.ensure_is_running()?;
@@ -1128,7 +1509,7 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         eprintln!("Error: No test specified");
         eprintln!("Usage: {} <test-name>", args[0]);
-        eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, all");
+        eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, morpho_supply_callback, morpho_supply_collateral_callback, morpho_repay_callback, morpho_liquidate_callback");
         std::process::exit(1);
     }
 
@@ -1159,9 +1540,25 @@ async fn main() -> Result<()> {
             println!("Running Morpho max borrow capacity test...");
             test_evm_end_to_end_morpho_not_reentrant(5).await?;
         }
+        "morpho_supply_callback" => {
+            println!("Running Morpho supply with callback test...");
+            test_evm_end_to_end_morpho_not_reentrant(6).await?;
+        }
+        "morpho_supply_collateral_callback" => {
+            println!("Running Morpho supply collateral with callback test...");
+            test_evm_end_to_end_morpho_not_reentrant(7).await?;
+        }
+        "morpho_repay_callback" => {
+            println!("Running Morpho repay with callback test...");
+            test_evm_end_to_end_morpho_not_reentrant(8).await?;
+        }
+        "morpho_liquidate_callback" => {
+            println!("Running Morpho liquidate with callback test...");
+            test_evm_end_to_end_morpho_not_reentrant(9).await?;
+        }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);
-            eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, all");
+            eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, morpho_liquidation, morpho_interest, morpho_multiple_suppliers, morpho_max_borrow, morpho_supply_callback, morpho_supply_collateral_callback, morpho_repay_callback, morpho_liquidate_callback");
             std::process::exit(1);
         }
     }

@@ -212,6 +212,13 @@ pub fn read_evm_address_entry(value: serde_json::Value) -> Address {
     Address::from_slice(&arr)
 }
 
+pub fn read_evm_bool_entry(value: serde_json::Value) -> bool {
+    let vec = value_to_vec_u8(value);
+    vec[31] == 1
+}
+
+
+
 /*
 fn get_bytecode_path(path: &Path, file_name: &str, contract_name: &str) -> anyhow::Result<Vec<u8>> {
     let config_path = path.join("config.json");
