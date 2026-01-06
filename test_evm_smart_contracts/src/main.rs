@@ -35,6 +35,45 @@ fn get_zero_operation(operation: impl alloy_sol_types::SolCall) -> Result<EvmQue
     operation.to_evm_query()
 }
 
+/// Parse a JSON array response into a fixed-size byte array
+fn parse_bytes32_from_array(value: &serde_json::Value) -> Result<[u8; 32]> {
+    let array = value.as_array()
+        .ok_or_else(|| anyhow::anyhow!("Expected array response"))?;
+    let mut bytes = [0u8; 32];
+    for (i, byte_val) in array.iter().enumerate() {
+        if i < 32 {
+            bytes[i] = byte_val.as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Failed to parse byte value at index {}", i))? as u8;
+        }
+    }
+    Ok(bytes)
+}
+
+/// Parse a uint256 value from a JSON array response
+fn parse_u256_from_array(value: &serde_json::Value) -> Result<U256> {
+    let bytes = parse_bytes32_from_array(value)?;
+    Ok(U256::from_be_bytes(bytes))
+}
+
+/// Parse a uint128 value from a specific offset in a JSON array response
+/// offset: the starting byte position in the array (e.g., 0 for first value, 32 for second, etc.)
+fn parse_u128_from_array_at_offset(value: &serde_json::Value, offset: usize) -> Result<u128> {
+    let array = value.as_array()
+        .ok_or_else(|| anyhow::anyhow!("Expected array response"))?;
+
+    // uint128 is 16 bytes, right-aligned in a 32-byte word
+    // So for offset N, we need bytes [N+16..N+32]
+    let mut bytes = [0u8; 16];
+    for i in 0..16 {
+        let array_idx = offset + 16 + i;
+        if array_idx < array.len() {
+            bytes[i] = array[array_idx].as_u64()
+                .ok_or_else(|| anyhow::anyhow!("Failed to parse byte at index {}", array_idx))? as u8;
+        }
+    }
+    Ok(u128::from_be_bytes(bytes))
+}
+
 fn get_config() -> LocalNetConfig {
     let mut config = LocalNetConfig::new_test(Database::Service, Network::Grpc);
     config.num_initial_validators = 1;
@@ -395,42 +434,24 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
         println!("test_evm_end_to_end_morpho_not_reentrant, step 27 - Got market id: {:?}", market_id_result);
 
         // Parse the market_id from the result
-        // The result is an array of 32 byte values
-        let market_id_array = market_id_result.as_array()
-            .ok_or_else(|| anyhow::anyhow!("Failed to parse market id as array"))?;
-        let mut market_id = [0u8; 32];
-        for (i, byte_val) in market_id_array.iter().enumerate() {
-            if i < 32 {
-                market_id[i] = byte_val.as_u64()
-                    .ok_or_else(|| anyhow::anyhow!("Failed to parse byte value"))? as u8;
-            }
-        }
+        let market_id = parse_bytes32_from_array(&market_id_result)?;
+
+        // Process inbox before querying market state
+        node_service_regular.process_inbox(&chain2).await?;
 
         let query = marketCall { id: market_id.into() };
         let query = EvmQuery::Query(query.abi_encode());
         let market_state = morpho_regular.run_json_query(query).await?;
-        println!("test_evm_end_to_end_morpho_not_reentrant, step 28 - Market state: {:?}", market_state);
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 28 - Market state queried");
 
         // Parse and verify totalSupplyAssets == supplyAmount
-        // Market state is returned as array of bytes (6 uint128 values, each padded to 32 bytes)
-        let market_state_array = market_state.as_array()
-            .ok_or_else(|| anyhow::anyhow!("Failed to parse market state as array"))?;
+        // Market state returns 6 uint128 values, each padded to 32 bytes
+        let total_supply_assets = parse_u128_from_array_at_offset(&market_state, 0)?;
+        let total_supply_assets_u256 = U256::from(total_supply_assets);
 
-        // Extract totalSupplyAssets (first uint128, right-aligned in first 32 bytes)
-        // Bytes 16-31 of the first 32-byte segment contain the actual uint128 value
-        let mut total_supply_bytes = [0u8; 32];
-        for i in 0..16 {
-            // Copy bytes 16-31 from the response to positions 16-31 in our array
-            if i + 16 < market_state_array.len() {
-                total_supply_bytes[i + 16] = market_state_array[i + 16].as_u64()
-                    .ok_or_else(|| anyhow::anyhow!("Failed to parse market state byte"))? as u8;
-            }
-        }
-        let total_supply_assets = U256::from_be_bytes(total_supply_bytes);
-        println!("test_evm_end_to_end_morpho_not_reentrant, Parsed totalSupplyAssets: {:?}, expected: {:?}", total_supply_assets, supply_amount);
-        // NOTE: Skipping verification for now as the market state query may need debugging
-        // assert_eq!(total_supply_assets, supply_amount, "Total supply mismatch");
-        println!("test_evm_end_to_end_morpho_not_reentrant, step 29 - Market state checked (verification skipped)");
+        // require(totalSupplyAssets == supplyAmount, "Total supply mismatch");
+        assert_eq!(total_supply_assets_u256, supply_amount, "Total supply mismatch");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 29 - Market state verified");
 
         // Step 4: Withdraw half
         let withdraw_amount = U256::from_str("500000000000000000000")?;
@@ -453,18 +474,7 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
         println!("test_evm_end_to_end_morpho_not_reentrant, step 31 - Balance result: {:?}", balance_result);
 
         // Parse and verify balance
-        // Balance is returned as array of bytes (uint256, padded to 32 bytes)
-        let balance_array = balance_result.as_array()
-            .ok_or_else(|| anyhow::anyhow!("Failed to parse balance as array"))?;
-
-        let mut balance_bytes = [0u8; 32];
-        for (i, byte_val) in balance_array.iter().enumerate() {
-            if i < 32 {
-                balance_bytes[i] = byte_val.as_u64()
-                    .ok_or_else(|| anyhow::anyhow!("Failed to parse balance byte"))? as u8;
-            }
-        }
-        let balance = U256::from_be_bytes(balance_bytes);
+        let balance = parse_u256_from_array(&balance_result)?;
         assert_eq!(balance, withdraw_amount, "Withdrawal verification failed");
         println!("test_evm_end_to_end_morpho_not_reentrant, step 32 - Withdrawal verified successfully");
     }
