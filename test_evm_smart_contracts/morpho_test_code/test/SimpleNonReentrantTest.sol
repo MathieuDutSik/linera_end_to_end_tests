@@ -137,13 +137,6 @@ contract SimpleNonReentrantTest {
         oracle.setPrice(ORACLE_PRICE_SCALE);
     }
 
-    /// @notice Setup Part B: Enable IRM and LLTV
-    function set_up_part_b() public {
-        require(msg.sender == owner, "non-coherency of address");
-//        morpho.enableIrm(address(irm));
-//        morpho.enableLltv(LLTV);
-    }
-
     /// @notice Setup Part C: Create market with given parameters
     function set_up_part_c() public {
         marketParams = MarketParams({
