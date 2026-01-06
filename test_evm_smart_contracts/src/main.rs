@@ -198,6 +198,32 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
             address onBehalf,
             address receiver
         ) external returns (uint256, uint256);
+        function supplyCollateral(
+            MarketParams marketParams,
+            uint256 assets,
+            address onBehalf,
+            bytes data
+        ) external;
+        function borrow(
+            MarketParams marketParams,
+            uint256 assets,
+            uint256 shares,
+            address onBehalf,
+            address receiver
+        ) external returns (uint256, uint256);
+        function repay(
+            MarketParams marketParams,
+            uint256 assets,
+            uint256 shares,
+            address onBehalf,
+            bytes data
+        ) external returns (uint256, uint256);
+        function withdrawCollateral(
+            MarketParams marketParams,
+            uint256 assets,
+            address onBehalf,
+            address receiver
+        ) external;
         function market(bytes32 id) external view returns (
             uint128 totalSupplyAssets,
             uint128 totalSupplyShares,
@@ -479,6 +505,136 @@ async fn test_evm_end_to_end_morpho_not_reentrant(choice: usize) -> Result<()> {
         println!("test_evm_end_to_end_morpho_not_reentrant, step 32 - Withdrawal verified successfully");
     }
 
+    if choice == 1 {
+        // Testing test_CompleteBorrowRepayCycle
+        let supply_amount = U256::from_str("10000000000000000000000")?; // 10000 ether
+        let collateral_amount = U256::from_str("1000000000000000000000")?; // 1000 ether
+        let borrow_amount = U256::from_str("600000000000000000000")?; // 600 ether
+
+        let market_params_sol = MarketParams {
+            loanToken: market_params.loan_token,
+            collateralToken: market_params.collateral_token,
+            oracle: market_params.oracle,
+            irm: market_params.irm,
+            lltv: market_params.lltv,
+        };
+
+        // Step 1: Supplier provides liquidity
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 33 - Setting balance for supplier");
+        let operation = setBalanceCall { owner: address_supplier, amount: supply_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        loan_token_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 34 - Balance set for supplier");
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 35 - Supplier providing liquidity");
+        let operation = supplyCall {
+            marketParams: market_params_sol.clone(),
+            assets: supply_amount,
+            shares: U256::ZERO,
+            onBehalf: address_supplier,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_supplier.process_inbox(&chain2).await?;
+        morpho_supplier.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 36 - Supplier provided liquidity");
+
+        // Step 2: Borrower supplies collateral
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 37 - Setting collateral balance for borrower");
+        let operation = setBalanceCall { owner: address_borrower, amount: collateral_amount };
+        let operation = get_zero_operation(operation)?;
+        node_service_regular.process_inbox(&chain2).await?;
+        let collateral_token_regular = node_service_regular.make_application(&chain2, &collateral_token_id)?;
+        collateral_token_regular.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 38 - Collateral balance set for borrower");
+
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 39 - Borrower supplying collateral");
+        let operation = supplyCollateralCall {
+            marketParams: market_params_sol.clone(),
+            assets: collateral_amount,
+            onBehalf: address_borrower,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 40 - Borrower supplied collateral");
+
+        // Step 3: Borrower borrows
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 41 - Borrower borrowing");
+        let operation = borrowCall {
+            marketParams: market_params_sol.clone(),
+            assets: borrow_amount,
+            shares: U256::ZERO,
+            onBehalf: address_borrower,
+            receiver: address_borrower,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 42 - Borrower borrowed");
+
+        // Verify borrow: require(loanToken.balanceOf(borrower) == borrowAmount, "Borrow failed");
+        let query = balanceOfCall { owner: address_borrower };
+        let query = EvmQuery::Query(query.abi_encode());
+        let balance_result = loan_token_borrower.run_json_query(query).await?;
+        let balance = parse_u256_from_array(&balance_result)?;
+        assert_eq!(balance, borrow_amount, "Borrow failed");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 43 - Borrow verified");
+
+        // Step 4: Borrower repays
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 44 - Borrower repaying");
+        let operation = repayCall {
+            marketParams: market_params_sol.clone(),
+            assets: borrow_amount,
+            shares: U256::ZERO,
+            onBehalf: address_borrower,
+            data: vec![].into(),
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 45 - Borrower repaid");
+
+        // Step 5: Borrower withdraws collateral
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 46 - Borrower withdrawing collateral");
+        let operation = withdrawCollateralCall {
+            marketParams: market_params_sol.clone(),
+            assets: collateral_amount,
+            onBehalf: address_borrower,
+            receiver: address_borrower,
+        };
+        let operation = get_zero_operation(operation)?;
+        node_service_borrower.process_inbox(&chain2).await?;
+        morpho_borrower.run_json_query(operation).await?;
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 47 - Borrower withdrew collateral");
+
+        // Verify final state
+        // require(collateralToken.balanceOf(borrower) == collateralAmount, "Collateral withdrawal failed");
+        let query = balanceOfCall { owner: address_borrower };
+        let query = EvmQuery::Query(query.abi_encode());
+        let balance_result = collateral_token_borrower.run_json_query(query).await?;
+        let balance = parse_u256_from_array(&balance_result)?;
+        assert_eq!(balance, collateral_amount, "Collateral withdrawal failed");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 48 - Collateral withdrawal verified");
+
+        // Verify debt is fully repaid: require(totalBorrowAssets == 0, "Debt not fully repaid");
+        let market_id = parse_bytes32_from_array(&test_contract_regular.run_json_query(
+            EvmQuery::Query(idCall { }.abi_encode())
+        ).await?)?;
+
+        node_service_regular.process_inbox(&chain2).await?;
+        let market_state = morpho_regular.run_json_query(
+            EvmQuery::Query(marketCall { id: market_id.into() }.abi_encode())
+        ).await?;
+
+        // totalBorrowAssets is the 3rd uint128 (offset 64 bytes)
+        let total_borrow_assets = parse_u128_from_array_at_offset(&market_state, 64)?;
+        assert_eq!(total_borrow_assets, 0, "Debt not fully repaid");
+        println!("test_evm_end_to_end_morpho_not_reentrant, step 49 - Debt repayment verified");
+    }
+
 
     node_service_regular.ensure_is_running()?;
     node_service_owner.ensure_is_running()?;
@@ -500,20 +656,24 @@ async fn main() -> Result<()> {
     if args.len() < 2 {
         eprintln!("Error: No test specified");
         eprintln!("Usage: {} <test-name>", args[0]);
-        eprintln!("Available tests: morpho_not_reentrant, all");
+        eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, all");
         std::process::exit(1);
     }
 
     let test_name = &args[1];
 
     match test_name.as_str() {
-        "morpho_not_reentrant" => {
-            println!("Running EVM counter test...");
+        "morpho_supply_withdraw" => {
+            println!("Running Morpho supply/withdraw test...");
             test_evm_end_to_end_morpho_not_reentrant(0).await?;
+        }
+        "morpho_borrow_repay" => {
+            println!("Running Morpho borrow/repay cycle test...");
+            test_evm_end_to_end_morpho_not_reentrant(1).await?;
         }
         _ => {
             eprintln!("Error: Unknown test '{}'", test_name);
-            eprintln!("Available tests: evm-counter, all");
+            eprintln!("Available tests: morpho_supply_withdraw, morpho_borrow_repay, all");
             std::process::exit(1);
         }
     }
