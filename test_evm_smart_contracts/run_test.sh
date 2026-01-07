@@ -35,7 +35,36 @@ ln -sf $LINERA_PATH/target/debug/linera-proxy target/debug/linera-proxy
 
 echo "Running some EVM tests..."
 #cargo run evm-counter
-#cargo run morpho_not_reentrant > res 2>&1
-cargo run --bin test_morpho_non_reentrant -- morpho_supply_collateral_callback > res 2>&1
+echo "Running morpho_supply_withdraw"
+cargo run morpho_supply_withdraw > res_0 2>&1
+
+echo "Running morpho_borrow_repay"
+cargo run morpho_borrow_repay > res_1 2>&1
+
+echo "Running morpho_liquidation"
+cargo run morpho_liquidation > res_2 2>&1
+
+echo "Running morpho_interest"
+cargo run morpho_interest > res_3 2>&1
+
+echo "Running morpho_multiple_suppliers"
+cargo run morpho_multiple_suppliers > res_4 2>&1
+
+echo "Running morpho_max_borrow"
+cargo run morpho_max_borrow > res_5 2>&1
+
+echo "Running morpho_supply_callback"
+cargo run morpho_supply_callback > res_6 2>&1
+
+echo "Running morpho_supply_collateral_callback"
+cargo run morpho_supply_collateral_callback > res_7 2>&1
+
+echo "Running morpho_repay_callback"
+cargo run morpho_repay_callback > res_8 2>&1
+
+echo "Running morpho_liquidate_callback"
+cargo run morpho_liquidate_callback > res_9 2>&1
+
+#cargo run morpho_supply_collateral_callback > res 2>&1
 
 echo "EVM test completed successfully!"
