@@ -7,19 +7,16 @@ use linera_service::cli_wrappers::{
 };
 
 const COINBASE_URL: &str = "https://api.exchange.coinbase.com/products/BTC-USD/trades";
-const KRAKEN_URL: &str = "https://api.kraken.com/0/public/Trades?pair=XBTUSDT";
+const KRAKEN_URL: &str = "https://api.kraken.com/0/public/Trades?pair=XBTUSDT?limit=10";
 
 fn get_config() -> LocalNetConfig {
     let mut config = LocalNetConfig::new_test(Database::Service, Network::Grpc);
     config.num_initial_validators = 1;
     config.num_shards = 1;
-//    config.http_request_allow_list = Some(vec![
-//        "localhost".to_owned(),
-//        "api.exchange.coinbase.com".to_owned(),
-//        "api.kraken.com".to_owned(),
-//    ]);
     config.http_request_allow_list = Some(vec![
+        "localhost".to_owned(),
         "api.exchange.coinbase.com".to_owned(),
+        "api.kraken.com".to_owned(),
     ]);
     config
 }
@@ -62,7 +59,6 @@ async fn main() -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Unexpected Coinbase response: {coinbase_value}"))?;
     anyhow::ensure!(coinbase_len > 0, "Coinbase response length is zero");
 
-/*
     let kraken_value = application
         .run_json_query(HttpQueryRequest::HttpGet(KRAKEN_URL.to_owned()))
         .await?;
@@ -70,7 +66,6 @@ async fn main() -> Result<()> {
         .as_u64()
         .ok_or_else(|| anyhow::anyhow!("Unexpected Kraken response: {kraken_value}"))?;
     anyhow::ensure!(kraken_len > 0, "Kraken response length is zero");
-*/
 
     node_service.ensure_is_running()?;
     net.ensure_is_running().await?;
