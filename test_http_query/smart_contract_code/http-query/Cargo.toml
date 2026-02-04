@@ -1,0 +1,24 @@
+[package]
+name = "http-query"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+async-graphql.workspace = true
+linera-sdk.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+linera-sdk = { workspace = true, features = ["test"] }
+tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+linera-sdk = { workspace = true, features = ["test", "wasmer"] }
+
+[[bin]]
+name = "http_query_contract"
+path = "src/contract.rs"
+
+[[bin]]
+name = "http_query_service"
+path = "src/service.rs"
