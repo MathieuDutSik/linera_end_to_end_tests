@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "http-query",
+]
+
+[workspace.dependencies]
+async-graphql = { version = "=7.0.17", default-features = false }
+async-graphql-value = "=7.0.17"
+linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "test_http_request" }
+serde = { version = "1.0.152", features = ["derive"] }
+
+http-query = { path = "./http-query" }
+
+[profile.release]
+debug = true
+lto = true
+opt-level = 'z'
+strip = 'debuginfo'
+
+[patch.crates-io]
+async-graphql-value = { path = "vendor/async-graphql-value" }
