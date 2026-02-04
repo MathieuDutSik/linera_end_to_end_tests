@@ -1,0 +1,22 @@
+[package]
+name = "test_wasm_smart_contracts"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+time = "=0.3.44"
+
+# Linera dependencies from GitHub
+linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "test_http_request", features = ["test"] }
+linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "test_http_request", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "test_http_request" }
+
+# Example applications
+http-query = { path = "./smart_contract_code/http-query" }
+
+[patch.crates-io]
+async-graphql-value = { path = "smart_contract_code/vendor/async-graphql-value" }
