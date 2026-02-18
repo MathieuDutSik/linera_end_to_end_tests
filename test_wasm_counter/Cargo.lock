@@ -2734,7 +2734,7 @@ dependencies = [
 [[package]]
 name = "linera-base"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "allocative",
  "alloy-primitives",
@@ -2781,7 +2781,7 @@ dependencies = [
 [[package]]
 name = "linera-chain"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "allocative",
  "async-graphql",
@@ -2806,7 +2806,7 @@ dependencies = [
 [[package]]
 name = "linera-client"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "bcs",
@@ -2847,7 +2847,7 @@ dependencies = [
 [[package]]
 name = "linera-core"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "async-graphql",
  "async-trait",
@@ -2883,7 +2883,7 @@ dependencies = [
 [[package]]
 name = "linera-execution"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "allocative",
  "anyhow",
@@ -2924,7 +2924,7 @@ dependencies = [
 [[package]]
 name = "linera-faucet-client"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "linera-base",
  "linera-client",
@@ -2940,7 +2940,7 @@ dependencies = [
 [[package]]
 name = "linera-faucet-server"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2969,7 +2969,7 @@ dependencies = [
 [[package]]
 name = "linera-metrics"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "axum",
@@ -2989,7 +2989,7 @@ checksum = "c9198100e9ce61acd3c714a2e61eb19fc5b8e2178dd645e2d9061e61e6e1feef"
 [[package]]
 name = "linera-persistent"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "cfg-if",
  "cfg_aliases",
@@ -3007,7 +3007,7 @@ dependencies = [
 [[package]]
 name = "linera-rpc"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3047,7 +3047,7 @@ dependencies = [
 [[package]]
 name = "linera-sdk"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -3075,7 +3075,7 @@ dependencies = [
 [[package]]
 name = "linera-sdk-derive"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "convert_case 0.6.0",
  "proc-macro2",
@@ -3085,7 +3085,7 @@ dependencies = [
 [[package]]
 name = "linera-service"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -3170,7 +3170,7 @@ dependencies = [
 [[package]]
 name = "linera-storage"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "async-trait",
  "bcs",
@@ -3191,7 +3191,7 @@ dependencies = [
 [[package]]
 name = "linera-storage-service"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "async-lock",
@@ -3216,7 +3216,7 @@ dependencies = [
 [[package]]
 name = "linera-version"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -3237,7 +3237,7 @@ dependencies = [
 [[package]]
 name = "linera-views"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "allocative",
  "anyhow",
@@ -3274,7 +3274,7 @@ dependencies = [
 [[package]]
 name = "linera-views-derive"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "cfg_aliases",
  "deluxe",
@@ -3423,7 +3423,7 @@ dependencies = [
 [[package]]
 name = "linera-witty"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "anyhow",
  "cfg_aliases",
@@ -3438,7 +3438,7 @@ dependencies = [
 [[package]]
 name = "linera-witty-macros"
 version = "0.16.0"
-source = "git+https://github.com/MathieuDutSik/linera-protocol_second?branch=out_of_scope_end_to_end_tests#f344740b359a4b05f6c346445d36a523b3e5ab3d"
+source = "git+https://github.com/MathieuDutSik/linera-protocol_second?rev=6dcc32305cff6d2853d14cab519efe9dfe316a58#6dcc32305cff6d2853d14cab519efe9dfe316a58"
 dependencies = [
  "cfg_aliases",
  "heck 0.4.1",

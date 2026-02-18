@@ -20,21 +20,25 @@ fn get_config() -> LocalNetConfig {
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-
+    println!("main, step 1");
     let config = get_config();
+    println!("main, step 2");
 
     let (mut net, client) = config.instantiate().await?;
+    println!("main, step 3");
 
     let original_counter_value = 35;
     let increment = 5;
 
     let chain = client.load_wallet()?.default_chain().unwrap();
     let account_chain = Account::chain(chain);
+    println!("main, step 4");
 
     let name1 = "counter";
     let path1 = std::env::current_dir()?.join("./smart_contract_code/").join(name1);
     let (contract_path, service_path) =
         client.build_application(&path1, name1, true).await?;
+    println!("main, step 5");
 
     let application_id = client
         .publish_and_create::<CounterAbi, (), u64>(

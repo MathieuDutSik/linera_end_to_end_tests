@@ -11,9 +11,9 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 time = "=0.3.44"
 
 # Linera dependencies from GitHub
-linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "out_of_scope_end_to_end_tests", features = ["test"] }
-linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "out_of_scope_end_to_end_tests", features = ["test", "storage-service", "wasmer"] }
-linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "out_of_scope_end_to_end_tests" }
+linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", rev = "6dcc32305cff6d2853d14cab519efe9dfe316a58", features = ["test"] }
+linera-service = { git = "https://github.com/MathieuDutSik/linera-protocol_second", rev = "6dcc32305cff6d2853d14cab519efe9dfe316a58", features = ["test", "storage-service", "wasmer"] }
+linera-sdk = { git = "https://github.com/MathieuDutSik/linera-protocol_second", rev = "6dcc32305cff6d2853d14cab519efe9dfe316a58" }
 
 # Example applications
 counter = { path = "./smart_contract_code/counter" }
