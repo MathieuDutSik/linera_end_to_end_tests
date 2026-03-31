@@ -1,0 +1,14 @@
+[package]
+name = "testnet_conway_faucet"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.48", features = ["derive"] }
+linera-base = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITreference_testnet_conway_A/linera-protocol/linera-base" }
+linera-faucet-client = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITreference_testnet_conway_A/linera-protocol/linera-faucet/client" }
+reqwest = { version = "0.12.23", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
