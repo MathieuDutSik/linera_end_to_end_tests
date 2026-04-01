@@ -8,7 +8,7 @@ anyhow = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
-time = "=0.3.44"
+time = "=0.3.47"
 
 # Linera dependencies from GitHub
 linera-base = { git = "https://github.com/MathieuDutSik/linera-protocol_second", branch = "test_http_request", features = ["test"] }
