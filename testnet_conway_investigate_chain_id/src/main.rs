@@ -58,7 +58,13 @@ fn print_info(
     println!("  Epoch:              {:?}", info.epoch);
     println!("  Next block height:  {}", info.next_block_height);
     println!("  Chain balance:      {}", info.chain_balance);
-    println!("  Timestamp:          {:?}", info.timestamp);
+    let micros = info.timestamp.micros();
+    let secs = (micros / 1_000_000) as i64;
+    let sub_micros = (micros % 1_000_000) as u32;
+    let datetime = chrono::DateTime::from_timestamp(secs, sub_micros * 1000)
+        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S%.6f UTC").to_string())
+        .unwrap_or_else(|| "invalid".to_string());
+    println!("  Timestamp:          {:?} ({})", info.timestamp, datetime);
     if let Some(hash) = &info.block_hash {
         println!("  Block hash:         {}", hash);
     }
