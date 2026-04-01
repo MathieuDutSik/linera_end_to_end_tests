@@ -1,0 +1,23 @@
+[package]
+name = "testnet_conway_investigate_chain_id"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.48", features = ["derive"] }
+linera-base = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITreference_testnet_conway_A/linera-protocol/linera-base" }
+linera-core = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITreference_testnet_conway_A/linera-protocol/linera-core" }
+linera-rpc = { path = "/Users/mathieudutoursikiric/GITlineraOpen/GITreference_testnet_conway_A/linera-protocol/linera-rpc", features = ["transport"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Pin transitive dependencies to versions compatible with Rust 1.86.0
+darling = { version = ">=0.20, <0.23" }
+serde_with = { version = ">=3, <3.18" }
+time = { version = ">=0.3, <0.3.47" }
+time-core = { version = ">=0.1, <0.1.8" }
+unicode-segmentation = { version = ">=1, <1.13" }
+async-graphql-value = { version = "=7.0.17" }
