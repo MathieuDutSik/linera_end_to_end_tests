@@ -2119,6 +2119,8 @@ checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 [[package]]
 name = "linera-base"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93b4e81f1d001d3fc46d267ff66ccac2a2ba87cee2ebfc34cb860e492e520172"
 dependencies = [
  "allocative",
  "alloy-primitives",
@@ -2167,18 +2169,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "linera-cache"
-version = "0.15.15"
-dependencies = [
- "cfg_aliases",
- "linera-base",
- "lru",
- "quick_cache",
-]
-
-[[package]]
 name = "linera-chain"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d787e025b9bf584c45596a92e40ce64b3240328a2facc1d10886c7986996b97"
 dependencies = [
  "allocative",
  "async-graphql",
@@ -2202,6 +2196,8 @@ dependencies = [
 [[package]]
 name = "linera-core"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46412e9b64a645a905a25f47bfe7de42485f61b04cc7599d41a8df456c344913"
 dependencies = [
  "async-graphql",
  "async-trait",
@@ -2211,12 +2207,12 @@ dependencies = [
  "custom_debug_derive",
  "futures",
  "linera-base",
- "linera-cache",
  "linera-chain",
  "linera-execution",
  "linera-storage",
  "linera-version",
  "linera-views",
+ "lru",
  "papaya",
  "rand 0.8.5",
  "serde",
@@ -2235,6 +2231,8 @@ dependencies = [
 [[package]]
 name = "linera-execution"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d94bb958b3c0659f05014dcfc03d749ea567ef9b7aaa970decf788c3c328b12e"
 dependencies = [
  "allocative",
  "anyhow",
@@ -2279,6 +2277,8 @@ checksum = "c9198100e9ce61acd3c714a2e61eb19fc5b8e2178dd645e2d9061e61e6e1feef"
 [[package]]
 name = "linera-rpc"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87448bb20c919685d84b971b1977cb8b6b7bc93fb7cf3d65b0e0470900cc31ce"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2315,6 +2315,8 @@ dependencies = [
 [[package]]
 name = "linera-storage"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ba97dc38d8d2b6c8469d0cfed2fa66601989e47d22d83f053c0a5f55fd6c0dc"
 dependencies = [
  "async-trait",
  "bcs",
@@ -2323,7 +2325,6 @@ dependencies = [
  "futures",
  "itertools",
  "linera-base",
- "linera-cache",
  "linera-chain",
  "linera-execution",
  "linera-views",
@@ -2337,6 +2338,8 @@ dependencies = [
 [[package]]
 name = "linera-version"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c41d2a2b800ae67aa834f0188421f974220310c39f8bb087f1be7c67a883aa12"
 dependencies = [
  "anyhow",
  "async-graphql",
@@ -2357,6 +2360,8 @@ dependencies = [
 [[package]]
 name = "linera-views"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04050bddb4313847b73fd2f0b516268093fbe6c7e24abb42e37b9df4a57983eb"
 dependencies = [
  "allocative",
  "anyhow",
@@ -2391,6 +2396,8 @@ dependencies = [
 [[package]]
 name = "linera-views-derive"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76165aa7e633950e863bbcf80f7298ade97a72ddefa50cf1f7908f4f3e143127"
 dependencies = [
  "cfg_aliases",
  "deluxe",
@@ -2486,6 +2493,8 @@ dependencies = [
 [[package]]
 name = "linera-witty"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7cb3ceaec9c1f595be00725ca85fb1ca8aecdcabae1a25543689f12a881e311"
 dependencies = [
  "anyhow",
  "cfg_aliases",
@@ -2499,6 +2508,8 @@ dependencies = [
 [[package]]
 name = "linera-witty-macros"
 version = "0.15.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c141889e2c329634f377a15c2406e0b2dbbd9870581e9c4db94a4058e757591"
 dependencies = [
  "cfg_aliases",
  "heck 0.4.1",
@@ -2769,9 +2780,9 @@ dependencies = [
 
 [[package]]
 name = "papaya"
-version = "0.2.4"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "997ee03cd38c01469a7046643714f0ad28880bcb9e6679ff0666e24817ca19b7"
+checksum = "aeb8b9616002a83f9779ea70a2a44364fe804f8b532b96989d0790a34ad76479"
 dependencies = [
  "equivalent",
  "seize",
@@ -3133,17 +3144,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "quick_cache"
-version = "0.6.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a70b1b8b47e31d0498ecbc3c5470bb931399a8bfed1fd79d1717a61ce7f96e3"
-dependencies = [
- "equivalent",
- "hashbrown 0.16.1",
- "parking_lot",
 ]
 
 [[package]]
@@ -3685,12 +3685,12 @@ dependencies = [
 
 [[package]]
 name = "seize"
-version = "0.5.1"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
+checksum = "d84b0c858bdd30cb56f5597f8b3bf702ec23829e652cc636a1e5a7b9de46ae93"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
