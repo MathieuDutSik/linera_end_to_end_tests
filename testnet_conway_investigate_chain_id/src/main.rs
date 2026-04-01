@@ -5,10 +5,12 @@ use linera_base::{
     data_types::{Amount, BlockHeight},
     identifiers::ChainId,
 };
+use linera_chain::data_types::IncomingBundle;
 use linera_core::{
     data_types::ChainInfoQuery,
     node::{ValidatorNode, ValidatorNodeProvider},
 };
+use linera_execution::Message;
 use testnet_conway_investigate_chain_id::VALIDATORS;
 
 #[derive(Parser)]
@@ -32,6 +34,19 @@ struct Args {
     /// Request manager values.
     #[arg(long)]
     manager_values: bool,
+
+    /// Show chain owners (from manager ownership info).
+    #[arg(long)]
+    owners: bool,
+
+    /// Request received log (chain IDs and heights of received certificates).
+    /// Optionally exclude the first N entries.
+    #[arg(long, value_name = "EXCLUDE_FIRST_N", default_missing_value = "0", num_args = 0..=1)]
+    received_log: Option<u64>,
+
+    /// Request all available info (enables all flags).
+    #[arg(long)]
+    all: bool,
 }
 
 struct ValidatorResult {
@@ -42,12 +57,104 @@ struct ValidatorResult {
     state_hash: Option<CryptoHash>,
 }
 
+fn print_owners(info: &linera_core::data_types::ChainInfo) {
+    let ownership = &info.manager.ownership;
+    if !ownership.super_owners.is_empty() {
+        println!("  Super owners ({}):", ownership.super_owners.len());
+        for owner in &ownership.super_owners {
+            println!("    {}", owner);
+        }
+    }
+    if !ownership.owners.is_empty() {
+        println!("  Owners ({}):", ownership.owners.len());
+        for (owner, weight) in &ownership.owners {
+            println!("    {} (weight: {})", owner, weight);
+        }
+    }
+    if ownership.super_owners.is_empty() && ownership.owners.is_empty() {
+        println!("  Owners:             none (public chain)");
+    }
+    println!(
+        "  Multi-leader rounds: {} (open: {})",
+        ownership.multi_leader_rounds, ownership.open_multi_leader_rounds
+    );
+    let tc = &ownership.timeout_config;
+    println!(
+        "  Timeout config:      base={:?}, increment={:?}, fallback={:?}, fast_round={:?}",
+        tc.base_timeout, tc.timeout_increment, tc.fallback_duration, tc.fast_round_duration
+    );
+}
+
+fn print_manager_info(info: &linera_core::data_types::ChainInfo) {
+    let mgr = &info.manager;
+    println!("  Current round:      {:?}", mgr.current_round);
+    if let Some(leader) = &mgr.leader {
+        println!("  Current leader:     {}", leader);
+    }
+    if let Some(timeout) = &mgr.round_timeout {
+        let datetime =
+            testnet_conway_investigate_chain_id::micros_to_datetime_string(timeout.micros());
+        println!("  Round timeout:      {:?} ({})", timeout, datetime);
+    }
+    if mgr.pending.is_some() {
+        println!("  Pending vote:       yes");
+    }
+    if mgr.timeout_vote.is_some() {
+        println!("  Timeout vote:       yes");
+    }
+    if mgr.fallback_vote.is_some() {
+        println!("  Fallback vote:      yes");
+    }
+    if mgr.timeout.is_some() {
+        println!("  Timeout cert:       present");
+    }
+}
+
+fn print_pending_bundle(bundle: &IncomingBundle) {
+    let datetime = testnet_conway_investigate_chain_id::micros_to_datetime_string(
+        bundle.bundle.timestamp.micros(),
+    );
+    println!(
+        "    Origin: {}, height: {}, time: {} ({:?}), cert: {}, action: {:?}",
+        bundle.origin,
+        bundle.bundle.height,
+        datetime,
+        bundle.bundle.timestamp,
+        bundle.bundle.certificate_hash,
+        bundle.action,
+    );
+    for msg in bundle.bundle.messages.iter() {
+        let app_info = match &msg.message {
+            Message::System(sys_msg) => format!("System({:?})", sys_msg),
+            Message::User {
+                application_id,
+                bytes,
+            } => format!(
+                "User(app: {}, {} bytes)",
+                application_id,
+                bytes.len()
+            ),
+        };
+        println!(
+            "      msg[{}]: kind={}, grant={}, {}",
+            msg.index, msg.kind, msg.grant, app_info,
+        );
+        if let Some(signer) = &msg.authenticated_signer {
+            println!("        signer: {}", signer);
+        }
+    }
+}
+
 fn print_info(
     info: &linera_core::data_types::ChainInfo,
     signature: &Option<linera_base::crypto::ValidatorSignature>,
+    show_owners: bool,
 ) {
     println!("  Chain ID:           {}", info.chain_id);
     println!("  Epoch:              {:?}", info.epoch);
+    if let Some(desc) = &info.description {
+        println!("  Description:        {:?}", desc);
+    }
     println!("  Next block height:  {}", info.next_block_height);
     println!("  Chain balance:      {}", info.chain_balance);
     let datetime = testnet_conway_investigate_chain_id::micros_to_datetime_string(
@@ -63,6 +170,15 @@ fn print_info(
     if let Some(balance) = &info.requested_owner_balance {
         println!("  Owner balance:      {}", balance);
     }
+
+    // Manager info (always available)
+    print_manager_info(info);
+
+    // Owners
+    if show_owners {
+        print_owners(info);
+    }
+
     if let Some(ref committees) = info.requested_committees {
         println!("  Committees:         {} epoch(s)", committees.len());
         for (epoch, _committee) in committees {
@@ -74,6 +190,44 @@ fn print_info(
             "  Pending bundles:    {}",
             info.requested_pending_message_bundles.len()
         );
+        for bundle in &info.requested_pending_message_bundles {
+            print_pending_bundle(bundle);
+        }
+        // Collect unique application IDs from pending messages
+        let mut app_ids: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        for bundle in &info.requested_pending_message_bundles {
+            for msg in bundle.bundle.messages.iter() {
+                match &msg.message {
+                    Message::System(_) => {
+                        app_ids.insert("System".to_string());
+                    }
+                    Message::User { application_id, .. } => {
+                        app_ids.insert(format!("{}", application_id));
+                    }
+                }
+            }
+        }
+        if !app_ids.is_empty() {
+            println!(
+                "  Applications in pending messages ({}):",
+                app_ids.len()
+            );
+            for app_id in &app_ids {
+                println!("    {}", app_id);
+            }
+        }
+    }
+    if !info.requested_received_log.is_empty() {
+        println!(
+            "  Received log entries: {}",
+            info.requested_received_log.len()
+        );
+        for entry in &info.requested_received_log {
+            println!(
+                "    from chain {} at height {}",
+                entry.chain_id, entry.height
+            );
+        }
     }
     println!("  Received log count: {}", info.count_received_log);
     if signature.is_some() {
@@ -97,6 +251,8 @@ async fn main() -> Result<()> {
     let mut results: Vec<ValidatorResult> = Vec::new();
     let mut errors: Vec<(String, String)> = Vec::new();
 
+    let show_owners = args.owners || args.all;
+
     for address in VALIDATORS {
         println!("=== Querying {} ===", address);
         let node = match provider.make_node(address) {
@@ -109,19 +265,24 @@ async fn main() -> Result<()> {
         };
 
         let mut query = ChainInfoQuery::new(chain_id);
-        if args.committees {
+        if args.committees || args.all {
             query = query.with_committees();
         }
-        if args.pending_messages {
+        if args.pending_messages || args.all {
             query = query.with_pending_message_bundles();
         }
-        if args.manager_values {
+        if args.manager_values || args.all {
             query = query.with_manager_values();
+        }
+        if let Some(exclude_n) = args.received_log {
+            query = query.with_received_log_excluding_first_n(exclude_n);
+        } else if args.all {
+            query = query.with_received_log_excluding_first_n(0);
         }
 
         match node.handle_chain_info_query(query).await {
             Ok(response) => {
-                print_info(&response.info, &response.signature);
+                print_info(&response.info, &response.signature, show_owners);
                 results.push(ValidatorResult {
                     address: address.to_string(),
                     next_block_height: response.info.next_block_height,
